@@ -23,10 +23,30 @@ cd "$(dirname "$0")"
 # clang wrapper (build/clangwrap/clang) that appends -lssl -lcrypto. The
 # wrapper is created fresh by do_native, used ONLY for that build command,
 # and never installed or left shadowing the system clang.
+# macOS has no system OpenSSL headers; point the wrapper at Homebrew's
+# openssl@3 (brew --prefix, falling back to the Apple Silicon default).
 setup_clangwrap() {
   mkdir -p build/clangwrap
-  printf '#!/bin/sh\nexec /usr/bin/clang "$@" -lssl -lcrypto\n' > build/clangwrap/clang
+  local ssl_flags="-lssl -lcrypto"
+  if [ "$(uname -s)" = Darwin ]; then
+    local ssl_prefix
+    ssl_prefix="$(brew --prefix openssl@3 2>/dev/null || echo /opt/homebrew/opt/openssl@3)"
+    ssl_flags="-I$ssl_prefix/include -L$ssl_prefix/lib -lssl -lcrypto"
+  fi
+  printf '#!/bin/sh\nexec /usr/bin/clang "$@" %s\n' "$ssl_flags" > build/clangwrap/clang
   chmod +x build/clangwrap/clang
+}
+
+# One native build at a time. flock(1) is Linux-only; mkdir is atomic
+# everywhere, so it serves as the lock on macOS.
+acquire_native_lock() {
+  if command -v flock >/dev/null 2>&1; then
+    exec 9>build/.native.lock
+    flock 9
+  else
+    until mkdir build/.native.lock.d 2>/dev/null; do sleep 1; done
+    trap 'rmdir build/.native.lock.d 2>/dev/null' EXIT
+  fi
 }
 
 sync_effs() {
@@ -66,8 +86,7 @@ do_check() {
 do_native() {
   local bundle="$1" out="$2"
   # Serialize native builds: one at a time.
-  exec 9>build/.native.lock
-  flock 9
+  acquire_native_lock
   setup_clangwrap
   # NOTE: callers pass the exact output path. The app build passes
   # build/shell_pty.new (never overwrite the promoted binary in place;
