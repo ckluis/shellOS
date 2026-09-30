@@ -3809,3 +3809,68 @@ Unchanged / not attempted:
 - No open bugs; bugs/hardening/security/performance/backlog all closed. No source changes. Nothing irreversible attempted.
 - Native rebuild NOT attempted: MemAvailable ~2.3G at 03:05 EDT, still far below the >=5G quiet-window bar. Fresh Xvfb proofs and palette-fix binary verification remain gated on the rebuild.
 ===
+
+## 2026-09-30 ~10:55 EDT — macOS arm64 port: rebuilt, palette freeze fixed, proven, PROMOTED
+
+The project moved from the Linux x86-64 VM to a macOS arm64 workstation
+(`~/Desktop/projects/shell-os-pure`, local git repo, no remote). The native
+rebuild that was RAM-blocked on the VM ran here on the first try.
+
+**Port (no pure-Bend changes needed):**
+- Bend 2.0.34's `Window` has a native AppKit backend and maps X11 keys to the
+  Mac codes, so app key handling is unchanged on macOS.
+- `build.sh`: the clang wrapper adds Homebrew `openssl@3` include/lib paths on
+  Darwin; a `mkdir` lock replaces `flock(1)` where it is absent. Linux behavior
+  is unchanged.
+- `effs/file_{mode,rename,sync}.c`: `size_t` -> `u64` for `io_cstr` lengths
+  (4 `-Wincompatible-pointer-types` warnings -> 0).
+- Xvfb harness replaced by `tools/macwin.m` (window id by pid, keys via
+  `CGEventPostToPid`, clicks) + `screencapture -l` (this window only), driven
+  by `tests/mac_proof.sh`. The terminal needs Accessibility + Screen Recording.
+
+**Build:** `./build.sh check` rc=0 (expected foreign-seam verdict only);
+`./build.sh native` rc=0, 52 s, 3.17 GB peak RSS, 0 warnings, 6.3 MB arm64
+Mach-O + 207 KB `.gpu` sidecar.
+
+**Bug found by the first fresh proof, FIXED — palette froze after opening.**
+The 09-25 touched-flag fix covered palette open/close only. `acc_pal_move`,
+`acc_pal_type` and `acc_pal_bs` still passed `accd` through unchanged, so
+typing a filter or pressing an arrow changed palette state but
+`tick_rebuild_go2` re-presented the stale frame. Proof run
+`proofs/mac_20260930_104441` caught it (filter and down frames byte-equal to
+the open frame, 2/2 boots). Fix: those three set `accd = True{}`. New probe
+`t35` in `test_wave3_palette.bend` fails on the old source (35/1) and passes
+on the fix (36/0).
+
+**Interpreter suites** (`tests/run_suites.sh`, Bend 2.0.34; the original
+per-suite runners did not ship in the package):
+- PASS: wave3_palette 36/36, wave4_dirty 24/24, wave4_scrollback 20/20,
+  wave5_help 14/14, wave5_notes 11/11.
+- STALE, pre-existing (not run): `test_crud2`, `test_wave1_session` and
+  `test_wave2_gmail_page` do not typecheck against the shipped source. Their
+  fixtures predate the 5-field `Item` (`It{title, theme, note, saved_at,
+  url}`) and the 11-field `AccSt` (`help`), and the gmail bundle predates the
+  Result-typed socket seam. The code under test is unchanged; the fixtures
+  need updating.
+
+**Fresh native proofs** (`tests/mac_proof.sh`, each boot in an isolated
+working dir with exact-pid lifecycle):
+- `proofs/mac_20260930_104952`: binary sha256 `4f076031…ecd08`, 2 fresh boots,
+  **22/22 gates × 2 PASS**: `;` palette opens, filters ("tab" -> 4 actions),
+  selection moves, Esc closes; `/` search opens, takes a query, closes; `a`
+  entry bar opens, takes text, commits; `items.txt` has the title, no `.tmp`;
+  `q` rc=0; PTY child gone; `session.txt` written; relaunch in the same dir
+  reloads the added item (Items: 5, verified by eye); relaunch `q` rc=0.
+- `proofs/mac_20260930_105057`: the same gates on the **promoted**
+  `build/shell_pty` (with the renamed `.gpu` sidecar), 1 boot, PASS.
+
+**Persistence + promotion:** secrets value-pattern audit clean (0 hits).
+`MANIFEST.sha256` (76 entries) verifies clean with `shasum -a 256 -c`.
+Promoted `build/shell_pty.new` -> `build/shell_pty` after all gates. The
+previous Linux binary is preserved as
+`build/shell_pty_linux_x86_64_20260925.bak` (sha `97ad6ad9…`).
+
+**Honest limits:** performance was not measured on this machine, so no
+"fast" claim. Gmail/AI/HTTPS paths build and link against Homebrew OpenSSL
+but were not exercised live (no configs here). The Linux build path is
+untouched but was not re-run.

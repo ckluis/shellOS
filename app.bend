@@ -3063,20 +3063,23 @@ def acc_pal_move_go(+up: Bool, +sel: U32, +n: U32) -> U32:
     case True{}: acc_pal_up_go(U32.is_eq(sel, 0), sel)
     case False{}: acc_pal_down_go(U32.is_lt(U32.add(sel, 1), n), sel)
 
+# Move/type/backspace change what the open palette shows, so each marks
+# accd (like acc_set_pal): otherwise tick_rebuild_go2 re-presents the stale
+# frame and the palette looks frozen after it opens.
 def acc_pal_move(+acc: AccSt, +up: Bool) -> AccSt:
   match acc:
-    case Acc{sq, sopen, ssel, gmail, ai, note, save_req, accd, search_go, Pal{pq, popen, psel, _}, help}:
-      Acc{sq, sopen, ssel, gmail, ai, note, save_req, accd, search_go, Pal{pq, popen, acc_pal_move_go(up, psel, pal_count(pal_filter(pq, pal_actions(pal_ctx_gmail(gmail))))), 0}, help}
+    case Acc{sq, sopen, ssel, gmail, ai, note, save_req, _, search_go, Pal{pq, popen, psel, _}, help}:
+      Acc{sq, sopen, ssel, gmail, ai, note, save_req, True{}, search_go, Pal{pq, popen, acc_pal_move_go(up, psel, pal_count(pal_filter(pq, pal_actions(pal_ctx_gmail(gmail))))), 0}, help}
 
 def acc_pal_type(+acc: AccSt, +q: String) -> AccSt:
   match acc:
-    case Acc{sq, sopen, ssel, gmail, ai, note, save_req, accd, search_go, Pal{_, popen, _, _}, help}:
-      Acc{sq, sopen, ssel, gmail, ai, note, save_req, accd, search_go, Pal{q, popen, 0, 0}, help}
+    case Acc{sq, sopen, ssel, gmail, ai, note, save_req, _, search_go, Pal{_, popen, _, _}, help}:
+      Acc{sq, sopen, ssel, gmail, ai, note, save_req, True{}, search_go, Pal{q, popen, 0, 0}, help}
 
 def acc_pal_bs(+acc: AccSt) -> AccSt:
   match acc:
-    case Acc{sq, sopen, ssel, gmail, ai, note, save_req, accd, search_go, Pal{pq, popen, _, _}, help}:
-      Acc{sq, sopen, ssel, gmail, ai, note, save_req, accd, search_go, Pal{entry_backspace(pq), popen, 0, 0}, help}
+    case Acc{sq, sopen, ssel, gmail, ai, note, save_req, _, search_go, Pal{pq, popen, _, _}, help}:
+      Acc{sq, sopen, ssel, gmail, ai, note, save_req, True{}, search_go, Pal{entry_backspace(pq), popen, 0, 0}, help}
 
 def acc_pal_print_go(+ok: Bool, +acc: AccSt, +c: U32) -> (AccSt & Bool):
   match ok:

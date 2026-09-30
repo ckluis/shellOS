@@ -15,7 +15,7 @@ static Term file_rename_pack(Env e, IoWork* w) {
 }
 
 Term file_rename_run(Env e, Term* f, IoWork* w) {
-  size_t n0 = 0, n1 = 0;
+  u64 n0 = 0, n1 = 0;
   char* s0 = io_cstr(e, f[0], &n0);
   char* s1 = io_cstr(e, f[1], &n1);
   if (!s0 || !s1) {

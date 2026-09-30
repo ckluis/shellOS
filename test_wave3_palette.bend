@@ -304,6 +304,13 @@ def p3_t34() -> Bool:
     bool_not(p3_pal_open(p3_key(p3_acc_gloading_sel(0), 13))),
     bool_not(p3_gmail_on(p3_key(p3_acc_gloading_sel(0), 13))))
 
+# t35: filter typing, arrows and backspace mark the palette touched, so the
+# frame repaints (from an untouched open palette, each key sets accd).
+def p3_t35() -> Bool:
+  p3_bool_and3(acc_is_touched(p3_key(p3_acc_pal(), 116)),
+    acc_is_touched(p3_key(p3_acc_pal(), 63233)),
+    acc_is_touched(p3_key(p3_acc_pal_q("ab"), 127)))
+
 # ---- driver ----
 
 def p3_line(+name: String, +ok: Bool) -> String:
@@ -347,7 +354,8 @@ def p3_main() -> String:
   String.append(p3_line("t32 ctx2 keeps '/'", p3_t32()),
   String.append(p3_line("t33 Esc honest per ctx", p3_t33()),
   String.append(p3_line("t34 ctx3 Esc dismisses", p3_t34()),
-  "")))))))))))))))))))))))))))))))))))
+  String.append(p3_line("t35 type/move/backspace repaint", p3_t35()),
+  ""))))))))))))))))))))))))))))))))))))
 
 def main() -> IO(Unit):
   do IO<Unit>:

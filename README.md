@@ -25,7 +25,24 @@ is foreign code; everything else is pure.
 - **Hard boundary:** never modify `~/workspace/apps/shell-os/core/`
   (the P0 backend — done, untouched).
 
-## Where we are (verified 2026-09-30 10:04 EDT)
+## macOS (2026-09-30 port — current)
+
+Runs natively on macOS arm64 (Bend 2.0.34, Apple clang, Homebrew `openssl@3`).
+See the last `REPORT.md` section for the full port record.
+
+```bash
+./build.sh check                 # typecheck (SOME PROOFS FAIL = expected seam verdict)
+./build.sh native                # -> build/shell_pty.new (+ .gpu sidecar)
+tests/run_suites.sh              # pure interpreter suites
+tests/mac_proof.sh [bin] [boots] # native window proofs -> proofs/mac_<stamp>/
+cd somewhere-with-items.txt && ~/Desktop/projects/shell-os-pure/build/shell_pty
+```
+
+Promote `.new` -> `build/shell_pty` (with its `.gpu`) only after
+`tests/mac_proof.sh` passes. The Linux notes below are kept for history; the
+blocker they describe is resolved on this machine.
+
+## Where we were on the Linux VM (verified 2026-09-30 10:04 EDT)
 
 **Complete (all verified):**
 - The 7 user-ordered accretive items: socket/TLS effect bridge, write-back

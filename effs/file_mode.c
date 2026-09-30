@@ -17,7 +17,7 @@ static Term file_mode_pack(Env e, IoWork* w) {
 }
 
 Term file_mode_run(Env e, Term* f, IoWork* w) {
-  size_t n0 = 0;
+  u64 n0 = 0;
   char* s0 = io_cstr(e, f[0], &n0);
   if (!s0) {
     w->code = 22;  /* EINVAL */
