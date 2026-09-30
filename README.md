@@ -36,7 +36,7 @@ See the last `REPORT.md` section for the full port record.
 tests/run_suites.sh              # pure interpreter suites
 tests/mac_proof.sh [bin] [boots] # native window proofs -> proofs/mac_<stamp>/
 tests/mac_shot.sh [bin] [dir]    # screenshots of the main screens (design review)
-cd somewhere-with-items.txt && ~/Desktop/projects/shell-os-pure/build/shell_pty
+cd somewhere-with-items.txt && ~/Desktop/projects/bend/shellOS/build/shell_pty
 ```
 
 Design: `design/mockup.html` (the picked "Panes" direction) and
