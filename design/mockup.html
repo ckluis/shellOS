@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shell-OS Redesign</title>
+<style>
+  :root {
+    --bg: #0b0c10; --fg: #d5d9e3; --dim: #8a93a8; --line: #232836; --accent: #7aa2f7;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 14px/1.5 ui-sans-serif, -apple-system, "Helvetica Neue", sans-serif; }
+  header { padding: 20px 24px 8px; max-width: 1400px; margin: 0 auto; }
+  h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
+  header p { margin: 0; color: var(--dim); max-width: 860px; }
+  .wrap { display: flex; gap: 24px; padding: 16px 24px 40px; max-width: 1400px; margin: 0 auto; align-items: flex-start; }
+  nav { display: flex; flex-direction: column; gap: 6px; width: 250px; flex: none; position: sticky; top: 16px; }
+  nav button { text-align: left; background: #12141b; color: var(--fg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px 12px; cursor: pointer; font: inherit; }
+  nav button small { display: block; color: var(--dim); font-size: 12px; margin-top: 2px; }
+  nav button.on { border-color: var(--accent); background: #151a26; }
+  nav kbd { float: right; color: var(--dim); font: 11px ui-monospace, monospace; border: 1px solid var(--line);
+    border-radius: 4px; padding: 0 5px; }
+  .notes { margin-top: 14px; color: var(--dim); font-size: 12.5px; line-height: 1.55; }
+  .notes b { color: var(--fg); font-weight: 600; }
+  .stage { flex: none; width: 1024px; }
+  .frame { width: 1024px; border-radius: 10px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.55);
+    border: 1px solid #1d212c; background: #000; }
+  .titlebar { height: 28px; background: #e9e9ec; display: flex; align-items: center; gap: 8px; padding: 0 10px;
+    color: #555; font-size: 13px; font-weight: 600; }
+  .titlebar i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  canvas, .frame img { display: block; width: 1024px; height: 1024px; image-rendering: pixelated; }
+  .frame img.shot { height: auto; }
+  .cap { color: var(--dim); font-size: 12.5px; margin-top: 10px; }
+  @media (max-width: 1320px) { .wrap { flex-direction: column; } nav { position: static; width: 100%; flex-direction: row; flex-wrap: wrap; } nav button { flex: 1 1 200px; } .stage { width: 100%; overflow-x: auto; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Shell-OS: a cleaner TUI look</h1>
+  <p>Every view here is drawn the way the real app draws: a 1024×1024 pixel canvas with a bitmap font, shown at 2× on Retina. Anything here can be built with the app's own drawing calls: filled rects, 1-pixel lines, bitmap text.</p>
+</header>
+<div class="wrap">
+  <nav id="nav"></nav>
+  <div class="stage">
+    <div class="frame" id="frame">
+      <div class="titlebar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#d0d0d4"></i><span style="margin-left:10px">Shell-OS</span></div>
+      <canvas id="cv" width="1024" height="1024"></canvas>
+      <img id="shot" class="shot" alt="current app screenshot" hidden>
+    </div>
+    <div class="cap" id="cap"></div>
+  </div>
+</div>
+<script>
+const SPLEEN = {"32": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "33": [0, 32, 32, 32, 32, 32, 32, 0, 32, 0, 0, 0], "34": [0, 80, 80, 80, 0, 0, 0, 0, 0, 0, 0, 0], "35": [0, 0, 80, 248, 80, 80, 80, 248, 80, 0, 0, 0], "36": [32, 120, 160, 160, 112, 40, 40, 40, 240, 32, 0, 0], "37": [0, 8, 72, 80, 16, 32, 40, 72, 64, 0, 0, 0], "38": [0, 48, 72, 72, 48, 96, 148, 136, 116, 0, 0, 0], "39": [0, 32, 32, 32, 0, 0, 0, 0, 0, 0, 0, 0], "40": [24, 32, 64, 64, 64, 64, 64, 64, 32, 24, 0, 0], "41": [96, 16, 8, 8, 8, 8, 8, 8, 16, 96, 0, 0], "42": [0, 0, 0, 72, 48, 252, 48, 72, 0, 0, 0, 0], "43": [0, 0, 0, 32, 32, 248, 32, 32, 0, 0, 0, 0], "44": [0, 0, 0, 0, 0, 0, 0, 32, 32, 64, 0, 0], "45": [0, 0, 0, 0, 0, 248, 0, 0, 0, 0, 0, 0], "46": [0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0], "47": [8, 8, 16, 16, 32, 32, 64, 64, 128, 128, 0, 0], "48": [0, 112, 136, 152, 168, 200, 136, 136, 112, 0, 0, 0], "49": [0, 32, 96, 32, 32, 32, 32, 32, 112, 0, 0, 0], "50": [0, 112, 136, 8, 8, 112, 128, 128, 248, 0, 0, 0], "51": [0, 112, 136, 8, 48, 8, 8, 136, 112, 0, 0, 0], "52": [0, 128, 128, 144, 144, 144, 248, 16, 16, 0, 0, 0], "53": [0, 248, 128, 128, 240, 8, 8, 8, 240, 0, 0, 0], "54": [0, 112, 128, 128, 240, 136, 136, 136, 112, 0, 0, 0], "55": [0, 248, 136, 8, 16, 32, 32, 32, 32, 0, 0, 0], "56": [0, 112, 136, 136, 112, 136, 136, 136, 112, 0, 0, 0], "57": [0, 112, 136, 136, 136, 120, 8, 8, 112, 0, 0, 0], "58": [0, 0, 0, 0, 32, 0, 0, 0, 32, 0, 0, 0], "59": [0, 0, 0, 0, 32, 0, 0, 32, 32, 64, 0, 0], "60": [0, 8, 16, 32, 64, 64, 32, 16, 8, 0, 0, 0], "61": [0, 0, 0, 0, 248, 0, 248, 0, 0, 0, 0, 0], "62": [0, 64, 32, 16, 8, 8, 16, 32, 64, 0, 0, 0], "63": [0, 112, 136, 8, 16, 32, 32, 0, 32, 0, 0, 0], "64": [0, 112, 136, 136, 184, 184, 184, 128, 120, 0, 0, 0], "65": [0, 112, 136, 136, 136, 248, 136, 136, 136, 0, 0, 0], "66": [0, 240, 136, 136, 240, 136, 136, 136, 240, 0, 0, 0], "67": [0, 120, 128, 128, 128, 128, 128, 128, 120, 0, 0, 0], "68": [0, 240, 136, 136, 136, 136, 136, 136, 240, 0, 0, 0], "69": [0, 120, 128, 128, 240, 128, 128, 128, 120, 0, 0, 0], "70": [0, 120, 128, 128, 240, 128, 128, 128, 128, 0, 0, 0], "71": [0, 120, 128, 128, 184, 136, 136, 136, 120, 0, 0, 0], "72": [0, 136, 136, 136, 248, 136, 136, 136, 136, 0, 0, 0], "73": [0, 112, 32, 32, 32, 32, 32, 32, 112, 0, 0, 0], "74": [0, 112, 32, 32, 32, 32, 32, 32, 192, 0, 0, 0], "75": [0, 136, 136, 144, 224, 144, 136, 136, 136, 0, 0, 0], "76": [0, 128, 128, 128, 128, 128, 128, 128, 120, 0, 0, 0], "77": [0, 136, 216, 248, 168, 136, 136, 136, 136, 0, 0, 0], "78": [0, 136, 200, 200, 168, 168, 152, 152, 136, 0, 0, 0], "79": [0, 112, 136, 136, 136, 136, 136, 136, 112, 0, 0, 0], "80": [0, 240, 136, 136, 136, 240, 128, 128, 128, 0, 0, 0], "81": [0, 112, 136, 136, 136, 136, 136, 136, 112, 24, 0, 0], "82": [0, 240, 136, 136, 136, 240, 136, 136, 136, 0, 0, 0], "83": [0, 120, 128, 128, 112, 8, 8, 8, 240, 0, 0, 0], "84": [0, 248, 32, 32, 32, 32, 32, 32, 32, 0, 0, 0], "85": [0, 136, 136, 136, 136, 136, 136, 136, 120, 0, 0, 0], "86": [0, 136, 136, 136, 136, 136, 136, 112, 112, 0, 0, 0], "87": [0, 136, 136, 136, 136, 168, 248, 216, 136, 0, 0, 0], "88": [0, 136, 136, 80, 32, 80, 136, 136, 136, 0, 0, 0], "89": [0, 136, 136, 136, 136, 120, 8, 8, 240, 0, 0, 0], "90": [0, 248, 8, 16, 32, 64, 128, 128, 248, 0, 0, 0], "91": [120, 64, 64, 64, 64, 64, 64, 64, 64, 120, 0, 0], "92": [128, 128, 64, 64, 32, 32, 16, 16, 8, 8, 0, 0], "93": [120, 8, 8, 8, 8, 8, 8, 8, 8, 120, 0, 0], "94": [0, 32, 80, 136, 0, 0, 0, 0, 0, 0, 0, 0], "95": [0, 0, 0, 0, 0, 0, 0, 0, 0, 248, 0, 0], "96": [0, 64, 32, 16, 0, 0, 0, 0, 0, 0, 0, 0], "97": [0, 0, 0, 112, 8, 120, 136, 136, 120, 0, 0, 0], "98": [0, 128, 128, 240, 136, 136, 136, 136, 240, 0, 0, 0], "99": [0, 0, 0, 120, 128, 128, 128, 128, 120, 0, 0, 0], "100": [0, 8, 8, 120, 136, 136, 136, 136, 120, 0, 0, 0], "101": [0, 0, 0, 120, 136, 136, 248, 128, 120, 0, 0, 0], "102": [0, 56, 64, 64, 240, 64, 64, 64, 64, 0, 0, 0], "103": [0, 0, 0, 120, 136, 136, 136, 136, 112, 8, 240, 0], "104": [0, 128, 128, 240, 136, 136, 136, 136, 136, 0, 0, 0], "105": [0, 32, 0, 96, 32, 32, 32, 32, 48, 0, 0, 0], "106": [0, 16, 0, 16, 16, 16, 16, 16, 16, 96, 0, 0], "107": [0, 128, 128, 144, 160, 192, 160, 144, 136, 0, 0, 0], "108": [0, 64, 64, 64, 64, 64, 64, 64, 48, 0, 0, 0], "109": [0, 0, 0, 240, 168, 168, 168, 136, 136, 0, 0, 0], "110": [0, 0, 0, 240, 136, 136, 136, 136, 136, 0, 0, 0], "111": [0, 0, 0, 112, 136, 136, 136, 136, 112, 0, 0, 0], "112": [0, 0, 0, 240, 136, 136, 136, 136, 240, 128, 128, 128], "113": [0, 0, 0, 120, 136, 136, 136, 136, 120, 8, 8, 8], "114": [0, 0, 0, 120, 136, 128, 128, 128, 128, 0, 0, 0], "115": [0, 0, 0, 120, 128, 112, 8, 8, 240, 0, 0, 0], "116": [0, 64, 64, 224, 64, 64, 64, 64, 48, 0, 0, 0], "117": [0, 0, 0, 136, 136, 136, 136, 136, 120, 0, 0, 0], "118": [0, 0, 0, 136, 136, 136, 136, 80, 32, 0, 0, 0], "119": [0, 0, 0, 136, 136, 168, 248, 216, 136, 0, 0, 0], "120": [0, 0, 0, 136, 136, 112, 112, 136, 136, 0, 0, 0], "121": [0, 0, 0, 136, 136, 136, 136, 136, 120, 8, 8, 240], "122": [0, 0, 0, 248, 8, 16, 32, 64, 248, 0, 0, 0], "123": [24, 32, 32, 32, 192, 192, 32, 32, 32, 24, 0, 0], "124": [32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 0, 0], "125": [96, 16, 16, 16, 12, 12, 16, 16, 16, 96, 0, 0], "126": [0, 0, 0, 0, 0, 72, 176, 0, 0, 0, 0, 0], "183": [0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0], "9472": [0, 0, 0, 0, 0, 252, 0, 0, 0, 0, 0, 0], "9474": [16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16], "9670": [0, 0, 0, 32, 112, 248, 112, 32, 0, 0, 0, 0]};
+
+// Hand-drawn 6x12 glyphs Spleen's ASCII set lacks (Bend maps these into
+// the font table's free slots 1-31).
+const EXTRA = {
+  "●": ["......","......","......","......",".###..","#####.","#####.","#####.",".###..","......","......","......"],
+  "…": ["......","......","......","......","......","......","......","......","#.#.#.","......","......","......"],
+  "▸": ["......","......","......","#.....","##....","###...","####..","###...","##....","#.....","......","......"],
+  "✓": ["......","......","......","......",".....#","....#.","#..#..",".##...",".#....","......","......","......"],
+  "↑": ["......","..#...",".###..","#.#.#.","..#...","..#...","..#...","..#...","..#...","......","......","......"],
+  "↓": ["......","..#...","..#...","..#...","..#...","..#...","#.#.#.",".###..","..#...","......","......","......"],
+  "◆": ["......","......","..#...",".###..","#####.",".###..","..#...","......","......","......","......","......"],
+};
+const GLYPH = {};
+for (const [k, rows] of Object.entries(SPLEEN)) GLYPH[String.fromCharCode(+k)] = rows.map(r => r >> 2);
+for (const [k, rows] of Object.entries(EXTRA)) GLYPH[k] = rows.map(s => [...s].reduce((a, c) => (a << 1) | (c === "#" ? 1 : 0), 0));
+
+const cv = document.getElementById("cv"), g = cv.getContext("2d");
+const CW = 6, CH = 12;
+
+function rect(x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+function text(x, y, s, c, bold) {
+  g.fillStyle = c;
+  let cx = x;
+  for (const ch of s) {
+    const rows = GLYPH[ch] || GLYPH["?"];
+    for (let r = 0; r < CH; r++) for (let b = 0; b < 6; b++)
+      if (rows[r] & (1 << (5 - b))) { g.fillRect(cx + b, y + r, 1, 1); }
+    cx += CW;
+  }
+  return cx;
+}
+const tw = s => [...s].length * CW;
+function fit(s, px) { const n = Math.floor(px / CW); return [...s].length <= n ? s : [...s].slice(0, n - 1).join("") + "…"; }
+function wrap(s, px) {
+  const n = Math.floor(px / CW), out = []; let line = "";
+  for (const w of s.split(" ")) { if ((line + (line ? " " : "") + w).length > n) { out.push(line); line = w; } else line += (line ? " " : "") + w; }
+  if (line) out.push(line); return out;
+}
+// Rounded 1px box (corner pixel pulled in: a TUI "╭" at pixel scale).
+function box(x, y, w, h, c) {
+  rect(x + 2, y, w - 4, 1, c); rect(x + 2, y + h - 1, w - 4, 1, c);
+  rect(x, y + 2, 1, h - 4, c); rect(x + w - 1, y + 2, 1, h - 4, c);
+  rect(x + 1, y + 1, 1, 1, c); rect(x + w - 2, y + 1, 1, 1, c);
+  rect(x + 1, y + h - 2, 1, 1, c); rect(x + w - 2, y + h - 2, 1, 1, c);
+}
+
+// ---------- design tokens ----------
+const T = {
+  bg: "#0f1117", bar: "#0a0b0f", pane: "#0f1117", raised: "#151923",
+  line: "#262c3a", lineHi: "#7aa2f7",
+  text: "#d5d9e3", body: "#b4bbca", sub: "#8a93a8", faint: "#4d5569",
+  accent: "#7aa2f7", selbg: "#1a2130", shadow: "#050608",
+  themes: { "all": "#7aa2f7", "home design": "#9ece6a", "gaming": "#bb9af7", "Nov trip": "#e0af68", "saved": "#7dcfff" },
+};
+const ITEMS = [
+  { t: "Walnut floating shelves", th: "home design", note: "measure the alcove first", saved: false },
+  { t: "Kitchen lighting refresh", th: "home design", note: "", saved: false },
+  { t: "Elden Ring: bleed build", th: "gaming", note: "arcane 45, rivers of blood", saved: true },
+  { t: "Balatro seed notes", th: "gaming", note: "", saved: false },
+  { t: "Lisbon flights Nov 14", th: "Nov trip", note: "TAP 0213 lands 07:40", saved: false },
+  { t: "Sintra day trip", th: "Nov trip", note: "", saved: true },
+];
+const THEMES = [["all", 6], ["home design", 2], ["gaming", 2], ["Nov trip", 2], ["saved", 2]];
+const ARTICLE = { title: "Shell-OS", n: "1/4", url: "shell-os://articles/shell-os",
+  paras: ["A pure Bend desktop shell. Reader, terminal, and tiles render from one program.",
+          "Themes group items automatically. Press 1-4 to filter, q to quit."] };
+const TERM = [["sh-3.2$ ", "ls"], ["", "items.txt  session.txt  notes/"], ["sh-3.2$ ", "git status -s"], ["", " M items.txt"], ["sh-3.2$ ", ""]];
+const KEYS = [["/", "search"], [";", "palette"], ["a", "add"], ["e", "edit"], ["d", "delete"], ["r", "reader"], ["t", "terminal"], ["?", "help"], ["q", "quit"]];
+
+// Pane: rounded box, title set into the top border, optional right label.
+function pane(x, y, w, h, title, right, focus) {
+  const lc = focus ? T.lineHi : T.line;
+  rect(x, y, w, h, T.pane); box(x, y, w, h, lc);
+  const tx = x + 12;
+  rect(tx - 4, y, tw(title) + 8, 1, T.pane);
+  text(tx, y - 6, title, focus ? T.accent : T.sub, focus);
+  if (right) { const rx = x + w - 12 - tw(right); rect(rx - 4, y, tw(right) + 8, 1, T.pane); text(rx, y - 6, right, T.faint); }
+}
+
+function topbar(minimal) {
+  rect(0, 0, 1024, 24, T.bar);
+  let x = text(12, 6, "◆", T.accent) + 6;
+  x = text(x, 6, "shell-os", T.text, true) + 18;
+  for (const p of ["default", "work", "personal"]) {
+    if (p === "default") { rect(x - 6, 4, tw(p) + 12, 16, minimal ? T.selbg : T.accent); x = text(x, 6, p, minimal ? T.accent : T.bar) + 18; }
+    else x = text(x, 6, p, T.faint) + 18;
+  }
+  const r = "6 items · 2 saved";
+  text(1012 - tw(r), 6, r, T.faint);
+  if (!minimal) rect(0, 24, 1024, 1, T.line);
+}
+function statusbar(mode) {
+  rect(0, 1000, 1024, 24, T.bar); rect(0, 999, 1024, 1, T.line);
+  rect(0, 1000, tw(mode) + 20, 24, T.accent);
+  text(10, 1006, mode, T.bar, true);
+  let x = tw(mode) + 36;
+  for (const [k, l] of KEYS) { x = text(x, 1006, k, T.accent) + 6; x = text(x, 1006, l, T.sub) + 18; }
+  text(1012 - tw("Bend 2.0.34"), 1006, "Bend 2.0.34", T.faint);
+}
+
+function themesList(x, y, w, sel) {
+  THEMES.forEach(([name, n], i) => {
+    const ry = y + i * 24;
+    if (i === sel) { rect(x, ry, w, 22, T.selbg); rect(x, ry, 2, 22, T.accent); }
+    text(x + 12, ry + 5, "●", T.themes[name]);
+    text(x + 26, ry + 5, name, i === sel ? T.text : T.body, i === sel);
+    text(x + w - 10 - tw(String(n)), ry + 5, String(n), i === sel ? T.sub : T.faint);
+  });
+}
+function itemsTable(x, y, w, sel) {
+  const cT = x + 14, cTh = x + 14 + 36 * CW, cN = cTh + 20 * CW, cS = x + w - 14 - CW;
+  text(cT, y, "TITLE", T.faint); text(cTh, y, "THEME", T.faint); text(cN, y, "NOTE", T.faint);
+  rect(x + 8, y + 17, w - 16, 1, T.line);
+  ITEMS.forEach((it, i) => {
+    const ry = y + 24 + i * 26;
+    if (i === sel) { rect(x + 2, ry - 2, w - 4, 24, T.selbg); rect(x + 2, ry - 2, 2, 24, T.accent); }
+    text(cT, ry + 4, fit(it.t, 34 * CW), i === sel ? T.text : T.body, i === sel);
+    text(cTh, ry + 4, "●", T.themes[it.th]); text(cTh + 14, ry + 4, it.th, T.sub);
+    text(cN, ry + 4, fit(it.note || "-", cS - cN - 18), it.note ? T.sub : T.faint);
+    if (it.saved) text(cS, ry + 4, "✓", T.themes.saved);
+  });
+}
+function reader(x, y, w, h) {
+  const inner = w - 28;
+  let ly = y;
+  text(x + 14, ly, ARTICLE.title, T.text, true); ly += 14;
+  rect(x + 14, ly, tw(ARTICLE.title) + 1, 1, T.accent); ly += 14;
+  for (const p of ARTICLE.paras) { for (const l of wrap(p, inner)) { text(x + 14, ly, l, T.body); ly += 16; } ly += 10; }
+  text(x + 14, y + h - 22, ARTICLE.url, T.faint);
+}
+function terminal(x, y, w, h) {
+  rect(x, y, w, h, "#0b0d12");
+  let ly = y + 8;
+  for (const [p, c] of TERM) { let cx = x + 10; if (p) cx = text(cx, ly, p, T.themes["home design"]); cx = text(cx, ly, c, T.text); ly += 15; }
+  rect(x + 10 + tw("sh-3.2$ "), ly - 15, 6, 12, T.accent);
+}
+
+// ---------- A: panes ----------
+function drawA(overlay) {
+  rect(0, 0, 1024, 1024, T.bg);
+  topbar(false);
+  pane(8, 40, 200, 212, "Themes", "1-5", false);
+  themesList(10, 56, 196, 0);
+  pane(216, 40, 800, 212, "Items", "page 1/1", !overlay);
+  itemsTable(216, 58, 800, 2);
+  pane(8, 268, 500, 722, "Reader", ARTICLE.n, false);
+  reader(8, 290, 500, 700);
+  pane(516, 268, 500, 722, "Terminal", "1  +", false);
+  terminal(518, 280, 496, 706);
+  statusbar(overlay ? "PALETTE" : "NORMAL");
+  if (overlay) palette();
+}
+
+// ---------- B: minimal (no boxes; spacing + hairlines) ----------
+function drawB() {
+  rect(0, 0, 1024, 1024, T.bg);
+  topbar(true);
+  rect(0, 24, 1024, 1, T.line);
+  // sidebar column
+  rect(216, 25, 1, 975, T.line);
+  text(20, 44, "THEMES", T.faint);
+  themesList(8, 64, 200, 0);
+  text(20, 200, "PROFILE", T.faint);
+  ["default", "work", "personal"].forEach((p, i) => { text(32, 220 + i * 22, p, i === 0 ? T.text : T.sub, i === 0); if (i === 0) text(20, 220, "▸", T.accent); });
+  // items
+  text(232, 44, "ITEMS", T.faint); text(1008 - tw("page 1/1"), 44, "page 1/1", T.faint);
+  itemsTable(218, 64, 798, 2);
+  rect(217, 262, 807, 1, T.line);
+  // reader + terminal
+  text(232, 280, "READER", T.faint); text(612 - tw("1/4"), 280, "1/4", T.faint);
+  reader(218, 302, 400, 690);
+  rect(628, 263, 1, 737, T.line);
+  text(644, 280, "TERMINAL", T.faint); text(1008 - tw("1  +"), 280, "1  +", T.faint);
+  terminal(629, 298, 395, 701);
+  statusbar("NORMAL");
+}
+
+function palette() {
+  const x = 212, y = 150, w = 600, rowH = 26;
+  const acts = [["{", "Previous tab", "focus the previous terminal tab"], ["}", "Next tab", "focus the next terminal tab"],
+                ["+", "New tab", "open a new terminal tab"], ["-", "Close tab", "close the current terminal tab"]];
+  const h = 56 + acts.length * rowH + 40;
+  rect(x + 6, y + 8, w, h, T.shadow);
+  rect(x, y, w, h, T.raised); box(x, y, w, h, T.lineHi);
+  let cx = text(x + 16, y + 16, ">", T.accent, true) + 10;
+  cx = text(cx, y + 16, "tab", T.text);
+  rect(cx + 1, y + 16, 6, 12, T.accent);
+  text(x + w - 16 - tw("4 / 25"), y + 16, "4 / 25", T.faint);
+  rect(x + 1, y + 40, w - 2, 1, T.line);
+  acts.forEach(([k, name, desc], i) => {
+    const ry = y + 48 + i * rowH, on = i === 1;
+    if (on) { rect(x + 1, ry, w - 2, rowH - 2, T.selbg); rect(x + 1, ry, 2, rowH - 2, T.accent); }
+    const nx = text(x + 16, ry + 6, name, on ? T.text : T.body, on) + 12;
+    text(nx, ry + 6, fit(desc, x + w - 60 - nx), T.sub);
+    rect(x + w - 34, ry + 4, 18, 16, on ? "#253049" : "#1b202b");
+    text(x + w - 28, ry + 6, k, on ? T.accent : T.sub);
+  });
+  const fy = y + h - 26;
+  rect(x + 1, fy - 6, w - 2, 1, T.line);
+  let fx = x + 16;
+  for (const [k, l] of [["↑↓", "move"], ["enter", "run"], ["esc", "close"]]) { fx = text(fx, fy, k, T.accent) + 6; fx = text(fx, fy, l, T.sub) + 18; }
+}
+
+// ---------- views ----------
+const VIEWS = [
+  { id: "cur", name: "Current", sub: "the app today", img: "current.png",
+    cap: "Today's app: an 8×8 font (font8x8) doubled to 16 device pixels; a 1-pixel grey border on every box; big mostly-empty cards; text clipped at pane edges." },
+  { id: "curp", name: "Current · palette", sub: "the app today", img: "current_palette.png",
+    cap: "Today's palette: rows run past the right edge (\"artic\", \"unf\"), there's no input field, and the header squeezes the count, close hint and query into one line." },
+  { id: "a", name: "A · Panes", sub: "recommended: lazygit / btop style", draw: () => drawA(false),
+    cap: "A: rounded panes with titles set into the border (TUI box-drawing, pixel-exact), Spleen 6×12, one accent plus a color per theme, a dense items table instead of empty cards, a helix-style NORMAL mode badge and key hints in the status bar. The terminal gets an 80-column pane." },
+  { id: "ap", name: "A · Palette open", sub: "same style, overlay", draw: () => drawA(true),
+    cap: "A, palette open: a real input line with a cursor, a match count, rows that truncate with … instead of clipping, key hints as keycaps, a footer legend, a drop shadow, and the mode badge switches to PALETTE." },
+  { id: "b", name: "B · Minimal", sub: "no boxes, hairlines only", draw: drawB,
+    cap: "B: same font, colors and content, but no boxes. Small-caps section labels and 1-pixel dividers only (zellij / helix compact feel). Quieter, but focus is harder to show without a bordered pane." },
+];
+const nav = document.getElementById("nav"), shot = document.getElementById("shot"), cap = document.getElementById("cap");
+function show(i) {
+  const v = VIEWS[i];
+  [...nav.children].forEach((b, j) => b.classList.toggle("on", j === i));
+  if (v.img) { cv.hidden = true; shot.hidden = false; shot.src = v.img; }
+  else { shot.hidden = true; cv.hidden = false; v.draw(); }
+  cap.textContent = v.cap;
+  try { localStorage.setItem("shellos-view", String(i)); } catch (e) {}
+}
+VIEWS.forEach((v, i) => {
+  const b = document.createElement("button");
+  b.innerHTML = `<kbd>${i + 1}</kbd>${v.name}<small>${v.sub}</small>`;
+  b.onclick = () => show(i); nav.appendChild(b);
+});
+const notes = document.createElement("div"); notes.className = "notes";
+notes.innerHTML = "<b>Same in both A and B</b><br>· Font: Spleen 6×12 (BSD-2) replaces font8x8: descenders, lighter weight, 170 × 85 cells<br>· Palette: one accent, theme colors, three text levels (bright / body / faint)<br>· Status bar: mode badge + key hints<br>· Truncate with … instead of clipping<br><br>Keys 1–5 switch views.";
+nav.appendChild(notes);
+document.addEventListener("keydown", e => { const n = +e.key; if (n >= 1 && n <= VIEWS.length) show(n - 1); });
+let start = 2; try { const s = +localStorage.getItem("shellos-view"); if (s >= 0 && s < VIEWS.length && localStorage.getItem("shellos-view") !== null) start = s; } catch (e) {}
+show(start);
+</script>
+</body>
+</html>

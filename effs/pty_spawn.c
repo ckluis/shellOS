@@ -91,6 +91,12 @@ Term pty_spawn_run(Env e, Term* f, IoWork* w) {
 #ifdef TIOCSCTTY
     ioctl(slave, TIOCSCTTY, 0);
 #endif
+#ifdef TIOCSWINSZ
+    // The emulator's grid is 80x24 (term.bend); tell the shell so programs
+    // that ask for the window size format for what is actually drawn.
+    struct winsize ws = { 24, 80, 480, 384 };
+    ioctl(slave, TIOCSWINSZ, &ws);
+#endif
     dup2(slave,0); dup2(slave,1); dup2(slave,2);
     if (slave > 2) close(slave);
     execl(shell, shell, (char*)NULL); _exit(127);

@@ -35,8 +35,13 @@ See the last `REPORT.md` section for the full port record.
 ./build.sh native                # -> build/shell_pty.new (+ .gpu sidecar)
 tests/run_suites.sh              # pure interpreter suites
 tests/mac_proof.sh [bin] [boots] # native window proofs -> proofs/mac_<stamp>/
+tests/mac_shot.sh [bin] [dir]    # screenshots of the main screens (design review)
 cd somewhere-with-items.txt && ~/Desktop/projects/shell-os-pure/build/shell_pty
 ```
+
+Design: `design/mockup.html` (the picked "Panes" direction) and
+`design/screens/` (before/after). Font: Spleen 6x12 via
+`tools_gen_font_spleen.py` -> `font6x12.bend`.
 
 Promote `.new` -> `build/shell_pty` (with its `.gpu`) only after
 `tests/mac_proof.sh` passes. The Linux notes below are kept for history; the

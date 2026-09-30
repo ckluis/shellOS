@@ -1,5 +1,5 @@
 # img.bend — pure pixel-quadtree image construction for the purist shell.
-# Requires font.bend (import Base + font_byte) concatenated BEFORE this file.
+# Requires font6x12.bend (import Base + glyph_w0..2) concatenated BEFORE this file.
 #
 # Color convention (project-wide): U32 color = 0xRRGGBB
 #   R = (c >> 16) & 0xFF, G = (c >> 8) & 0xFF, B = c & 0xFF.
@@ -140,7 +140,13 @@ def cpaint(d: Nat, img: Image, +x: U32, +y: U32, +rx0: U32, +ry0: U32, +rx1: U32
 def cfill_rect(d: Nat, img: Image, +x: U32, +y: U32, +w: U32, +h: U32, +c: U32, +kx0: U32, +ky0: U32, +kx1: U32, +ky1: U32) -> Image:
   cpaint(d, img, 0, 0, x, y, U32.add(x, w), U32.add(y, h), c, kx0, ky0, kx1, ky1)
 
-# ---------- glyphs & text (font.bend: font_byte) ----------
+# ---------- glyphs & text (font6x12.bend: glyph_w) ----------
+# Cell metrics: Spleen 6x12. A glyph is three packed words of four 6-bit
+# rows each (bit 0 = leftmost pixel). All-zero words and rows are skipped,
+# so spaces and blank terminal cells cost almost nothing.
+
+def glyph_px_w() -> U32: 6
+def glyph_px_h() -> U32: 12
 
 def paint_bit(+on: Bool, d: Nat, img: Image, +x: U32, +y: U32, +fg: U32) -> Image:
   match on:
@@ -152,50 +158,77 @@ def paint_bit_clipped(+on: Bool, d: Nat, img: Image, +x: U32, +y: U32, +fg: U32,
     case True{}: cpaint(d, img, 0, 0, x, y, U32.add(x, 1), U32.add(y, 1), fg, kx0, ky0, kx1, ky1)
     case False{}: img
 
-def blit_byte(n: Nat, +d: Nat, img: Image, +x: U32, +y: U32, +byte: U32, +fg: U32) -> Image:
+# One 6-pixel row. mc descends 5->0 as x ascends, so bit 0 paints first.
+def blit_bits(n: Nat, +d: Nat, img: Image, +x: U32, +y: U32, +bits: U32, +fg: U32) -> Image:
   match n:
     case 0n: img
     case 1n+m:
       +mc = m
-      # font8x8 convention: bit 0 = leftmost pixel (LSB-first). mc descends
-      # 7->0 as x ascends, so test bit (7-mc): first pixel gets bit 0.
-      +on = U32.is_ne(U32.and(byte, U32.shln(1, Nat.sub(7n, mc))), 0)
-      blit_byte(mc, d, paint_bit(on, d, img, x, y, fg), U32.add(x, 1), y, byte, fg)
+      +on = U32.is_ne(U32.and(bits, U32.shln(1, Nat.sub(5n, mc))), 0)
+      blit_bits(mc, d, paint_bit(on, d, img, x, y, fg), U32.add(x, 1), y, bits, fg)
 
-def blit_byte_clipped(n: Nat, +d: Nat, img: Image, +x: U32, +y: U32, +byte: U32, +fg: U32, +kx0: U32, +ky0: U32, +kx1: U32, +ky1: U32) -> Image:
+def blit_bits_clipped(n: Nat, +d: Nat, img: Image, +x: U32, +y: U32, +bits: U32, +fg: U32, +kx0: U32, +ky0: U32, +kx1: U32, +ky1: U32) -> Image:
   match n:
     case 0n: img
     case 1n+m:
       +mc = m
-      # font8x8 convention: bit 0 = leftmost pixel (LSB-first). See blit_byte.
-      +on = U32.is_ne(U32.and(byte, U32.shln(1, Nat.sub(7n, mc))), 0)
-      blit_byte_clipped(mc, d, paint_bit_clipped(on, d, img, x, y, fg, kx0, ky0, kx1, ky1), U32.add(x, 1), y, byte, fg, kx0, ky0, kx1, ky1)
+      +on = U32.is_ne(U32.and(bits, U32.shln(1, Nat.sub(5n, mc))), 0)
+      blit_bits_clipped(mc, d, paint_bit_clipped(on, d, img, x, y, fg, kx0, ky0, kx1, ky1), U32.add(x, 1), y, bits, fg, kx0, ky0, kx1, ky1)
 
-def blit_rows(n: Nat, +tbl: List<&2, U32>, +d: Nat, img: Image, +gx: U32, +gy: U32, +code: U32, +fg: U32) -> Image:
+def blit_row_go(+blank: Bool, +d: Nat, img: Image, +x: U32, +y: U32, +bits: U32, +fg: U32) -> Image:
+  match blank:
+    case True{}: img
+    case False{}: blit_bits(6n, d, img, x, y, bits, fg)
+
+def blit_row_clipped_go(+blank: Bool, +d: Nat, img: Image, +x: U32, +y: U32, +bits: U32, +fg: U32, +kx0: U32, +ky0: U32, +kx1: U32, +ky1: U32) -> Image:
+  match blank:
+    case True{}: img
+    case False{}: blit_bits_clipped(6n, d, img, x, y, bits, fg, kx0, ky0, kx1, ky1)
+
+# Rows 0..3 of a packed word at y..y+3 (n counts down, row = 4 - n).
+def blit_word_rows(n: Nat, +d: Nat, img: Image, +x: U32, +y: U32, +w: U32, +fg: U32) -> Image:
   match n:
     case 0n: img
     case 1n+m:
       +mc = m
-      +row = Nat.sub(7n, mc)
-      +yy = U32.add(gy, U32.from_nat(row))
-      +byte = font_byte(tbl, U32.add(U32.mul(code, 8), U32.from_nat(row)))
-      blit_rows(mc, tbl, d, blit_byte(8n, d, img, gx, yy, byte, fg), gx, gy, code, fg)
+      +r = U32.sub(3, U32.from_nat(mc))
+      +bits = U32.and(U32.shrn(w, U32.to_nat(U32.mul(r, 6))), 63)
+      blit_word_rows(mc, d, blit_row_go(U32.is_eq(bits, 0), d, img, x, U32.add(y, r), bits, fg), x, y, w, fg)
 
-def blit_rows_clipped(n: Nat, +tbl: List<&2, U32>, +d: Nat, img: Image, +gx: U32, +gy: U32, +code: U32, +fg: U32, +kx0: U32, +ky0: U32, +kx1: U32, +ky1: U32) -> Image:
+def blit_word_rows_clipped(n: Nat, +d: Nat, img: Image, +x: U32, +y: U32, +w: U32, +fg: U32, +kx0: U32, +ky0: U32, +kx1: U32, +ky1: U32) -> Image:
   match n:
     case 0n: img
     case 1n+m:
       +mc = m
-      +row = Nat.sub(7n, mc)
-      +yy = U32.add(gy, U32.from_nat(row))
-      +byte = font_byte(tbl, U32.add(U32.mul(code, 8), U32.from_nat(row)))
-      blit_rows_clipped(mc, tbl, d, blit_byte_clipped(8n, d, img, gx, yy, byte, fg, kx0, ky0, kx1, ky1), gx, gy, code, fg, kx0, ky0, kx1, ky1)
+      +r = U32.sub(3, U32.from_nat(mc))
+      +bits = U32.and(U32.shrn(w, U32.to_nat(U32.mul(r, 6))), 63)
+      blit_word_rows_clipped(mc, d, blit_row_clipped_go(U32.is_eq(bits, 0), d, img, x, U32.add(y, r), bits, fg, kx0, ky0, kx1, ky1), x, y, w, fg, kx0, ky0, kx1, ky1)
 
-def blit_glyph(+tbl: List<&2, U32>, d: Nat, img: Image, +gx: U32, +gy: U32, +code: U32, +fg: U32) -> Image:
-  blit_rows(8n, tbl, d, img, gx, gy, code, fg)
+def blit_word_go(+blank: Bool, +d: Nat, img: Image, +x: U32, +y: U32, +w: U32, +fg: U32) -> Image:
+  match blank:
+    case True{}: img
+    case False{}: blit_word_rows(4n, d, img, x, y, w, fg)
 
-def blit_glyph_clipped(+tbl: List<&2, U32>, d: Nat, img: Image, +gx: U32, +gy: U32, +code: U32, +fg: U32, +kx0: U32, +ky0: U32, +kx1: U32, +ky1: U32) -> Image:
-  blit_rows_clipped(8n, tbl, d, img, gx, gy, code, fg, kx0, ky0, kx1, ky1)
+def blit_word_clipped_go(+blank: Bool, +d: Nat, img: Image, +x: U32, +y: U32, +w: U32, +fg: U32, +kx0: U32, +ky0: U32, +kx1: U32, +ky1: U32) -> Image:
+  match blank:
+    case True{}: img
+    case False{}: blit_word_rows_clipped(4n, d, img, x, y, w, fg, kx0, ky0, kx1, ky1)
+
+def blit_glyph(+d: Nat, img: Image, +gx: U32, +gy: U32, +code: U32, +fg: U32) -> Image:
+  +w0 = glyph_w0(code)
+  +w1 = glyph_w1(code)
+  +w2 = glyph_w2(code)
+  +i1 = blit_word_go(U32.is_eq(w0, 0), d, img, gx, gy, w0, fg)
+  +i2 = blit_word_go(U32.is_eq(w1, 0), d, i1, gx, U32.add(gy, 4), w1, fg)
+  blit_word_go(U32.is_eq(w2, 0), d, i2, gx, U32.add(gy, 8), w2, fg)
+
+def blit_glyph_clipped(+d: Nat, img: Image, +gx: U32, +gy: U32, +code: U32, +fg: U32, +kx0: U32, +ky0: U32, +kx1: U32, +ky1: U32) -> Image:
+  +w0 = glyph_w0(code)
+  +w1 = glyph_w1(code)
+  +w2 = glyph_w2(code)
+  +i1 = blit_word_clipped_go(U32.is_eq(w0, 0), d, img, gx, gy, w0, fg, kx0, ky0, kx1, ky1)
+  +i2 = blit_word_clipped_go(U32.is_eq(w1, 0), d, i1, gx, U32.add(gy, 4), w1, fg, kx0, ky0, kx1, ky1)
+  blit_word_clipped_go(U32.is_eq(w2, 0), d, i2, gx, U32.add(gy, 8), w2, fg, kx0, ky0, kx1, ky1)
 
 def str_len(s: String) -> Nat:
   match s:
@@ -203,27 +236,26 @@ def str_len(s: String) -> Nat:
     case SCon{_, t}: Nat.add(1n, str_len(t))
 
 def text_width(s: String) -> U32:
-  U32.mul(8, U32.from_nat(str_len(s)))
+  U32.mul(6, U32.from_nat(str_len(s)))
 
 # Single-line text. For multi-line, split first and call per line.
-# The font table is built once per string (not per glyph).
-def draw_text_go(s: String, +tbl: List<&2, U32>, +d: Nat, img: Image, +x: U32, +y: U32, +fg: U32) -> Image:
+def draw_text_go(s: String, +d: Nat, img: Image, +x: U32, +y: U32, +fg: U32) -> Image:
   match s:
     case SNil{}: img
     case SCon{Chr{code}, t}:
-      draw_text_go(t, tbl, d, blit_glyph(tbl, d, img, x, y, code, fg), U32.add(x, 8), y, fg)
+      draw_text_go(t, d, blit_glyph(d, img, x, y, code, fg), U32.add(x, 6), y, fg)
 
 def draw_text(s: String, +d: Nat, img: Image, +x: U32, +y: U32, +fg: U32) -> Image:
-  draw_text_go(s, font_data(), d, img, x, y, fg)
+  draw_text_go(s, d, img, x, y, fg)
 
-def draw_text_clipped_go(s: String, +tbl: List<&2, U32>, +d: Nat, img: Image, +x: U32, +y: U32, +fg: U32, +kx0: U32, +ky0: U32, +kx1: U32, +ky1: U32) -> Image:
+def draw_text_clipped_go(s: String, +d: Nat, img: Image, +x: U32, +y: U32, +fg: U32, +kx0: U32, +ky0: U32, +kx1: U32, +ky1: U32) -> Image:
   match s:
     case SNil{}: img
     case SCon{Chr{code}, t}:
-      draw_text_clipped_go(t, tbl, d, blit_glyph_clipped(tbl, d, img, x, y, code, fg, kx0, ky0, kx1, ky1), U32.add(x, 8), y, fg, kx0, ky0, kx1, ky1)
+      draw_text_clipped_go(t, d, blit_glyph_clipped(d, img, x, y, code, fg, kx0, ky0, kx1, ky1), U32.add(x, 6), y, fg, kx0, ky0, kx1, ky1)
 
 def draw_text_clipped(s: String, +d: Nat, img: Image, +x: U32, +y: U32, +fg: U32, +kx0: U32, +ky0: U32, +kx1: U32, +ky1: U32) -> Image:
-  draw_text_clipped_go(s, font_data(), d, img, x, y, fg, kx0, ky0, kx1, ky1)
+  draw_text_clipped_go(s, d, img, x, y, fg, kx0, ky0, kx1, ky1)
 
 # ---------- PPM encoding (P6 binary) ----------
 # Row-major traversal via get_pixel. The quadtree's natural quadrant-major

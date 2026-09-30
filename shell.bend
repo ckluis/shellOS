@@ -1011,7 +1011,7 @@ def load_session() -> IO(SessSt):
 def reader_art_html(+a: U32) -> String:
   match a:
     case 0: "<h1>Shell-OS</h1><p>A pure Bend desktop shell. Reader, terminal, and tiles render from one program.</p><p>Themes group items automatically. Press 1-4 to filter, q to quit.</p>"
-    case 1: "<h1>Pure Bend</h1><p>Every pixel of this shell is computed in Bend: the font rasterizer, the tile layout, the reader text extraction, and the terminal emulator.</p><p>Only files, sockets, the window, and the PTY are foreign effects.</p><p>The renderer builds a full 1024 by 1024 frame in 193 milliseconds natively. That is twenty one times faster than the same program running on Bun.</p><p>Text goes through a pure pipeline. HTML is tokenized, tags are stripped, the text is extracted and word wrapped, then each glyph is blitted from an 8 by 8 bitmap font.</p><p>The terminal is a pure state machine. It parses ANSI escape sequences, keeps a scrollback buffer, and renders its grid with the same blitter as everything else on screen.</p><p>Effects are named and minimal. A file read loads the item list at startup. The PTY effect spawns a shell. The window effect presents each frame. Everything else is pure Bend.</p><p>This article is long enough to scroll. Press Down to move through it and Up to come back. The scroll position resets when you switch articles.</p>"
+    case 1: "<h1>Pure Bend</h1><p>Every pixel of this shell is computed in Bend: the font rasterizer, the tile layout, the reader text extraction, and the terminal emulator.</p><p>Only files, sockets, the window, and the PTY are foreign effects.</p><p>The renderer builds a full 1024 by 1024 frame in 193 milliseconds natively. That is twenty one times faster than the same program running on Bun.</p><p>Text goes through a pure pipeline. HTML is tokenized, tags are stripped, the text is extracted and word wrapped, then each glyph is blitted from a 6 by 12 bitmap font (Spleen).</p><p>The terminal is a pure state machine. It parses ANSI escape sequences, keeps a scrollback buffer, and renders its grid with the same blitter as everything else on screen.</p><p>Effects are named and minimal. A file read loads the item list at startup. The PTY effect spawns a shell. The window effect presents each frame. Everything else is pure Bend.</p><p>This article is long enough to scroll. Press Down to move through it and Up to come back. The scroll position resets when you switch articles.</p>"
     case 2: "<h1>Reader manual</h1><p>Press r to focus the reader. Up and Down scroll. n and p switch articles. Esc unfocuses.</p><p>Articles are parsed from HTML by the pure reader: tags stripped, text wrapped to the tile.</p>"
     case _: "<h1>Shell-OS</h1><p>Empty.</p>"
 
@@ -1040,8 +1040,30 @@ def reader_html_for(+rart: U32, +feed: String) -> String:
 type ViewSt is Data:
   VSt{page: U32, rfocus: Bool, rart: U32, rscroll: U32, rlines: List<&2, String>}
 
+# Each text chunk (a heading or paragraph) wraps on its own, with an empty
+# line between chunks, so the reader keeps the article's paragraphs.
+# The tokenizer emits empty text between adjacent tags; drop those first.
+def chunks_nonempty(+xs: List<&2, String>) -> List<&2, String>:
+  match xs:
+    case Nil{}: Nil{}
+    case h <> t:
+      match h:
+        case SNil{}: chunks_nonempty(t)
+        case SCon{_, _}: Con{h, chunks_nonempty(t)}
+
+def wrap_paras_go(+chunks: List<&2, String>, +w: Nat) -> List<&2, String>:
+  match chunks:
+    case Nil{}: Nil{}
+    case h <> t:
+      match t:
+        case Nil{}: word_wrap(h, w)
+        case _ <> _: List.append(&2, String, word_wrap(h, w), Con{"", wrap_paras_go(t, w)})
+
+def wrap_paras(+chunks: List<&2, String>, +w: Nat) -> List<&2, String>:
+  wrap_paras_go(chunks_nonempty(chunks), w)
+
 def reader_lines(+rart: U32, +feed: String) -> List<&2, String>:
-  word_wrap(extract_text(tokenize(reader_html_for(rart, feed))), 30n)
+  wrap_paras(ext_drop_lead(rev_str(ext_collect(tokenize(reader_html_for(rart, feed)), Nil{}), Nil{})), 74n)
 
 def viewst_new(+feed: String) -> ViewSt:
   VSt{0, False{}, 0, 0, reader_lines(0, feed)}
@@ -1060,7 +1082,7 @@ def viewst_rfocus(+vs: ViewSt) -> Bool:
 def page_count(+n: U32) -> U32:
   match n:
     case 0: 0
-    case _: U32.div(U32.add(n, 5), 6)
+    case _: U32.div(U32.add(n, 7), 8)
 
 def page_clamp_pick(+le: Bool, +page: U32, +max: U32) -> U32:
   match le:
@@ -1176,17 +1198,20 @@ def drop_str(+xs: List<&2, String>, +n: U32) -> List<&2, String>:
     case Nil{}, _: Nil{}
     case _ <> t, m: drop_str(t, U32.sub(m, 1))
 
-# Viewport shows 34 lines; max scroll keeps the last line reachable.
-# scroll_max_lines reads the CACHED wrapped lines (O(lines)); the old
-# scroll_max(rart, feed) re-ran the full reader pipeline per keypress.
+# The reader pane shows reader_vis_lines() lines; max scroll keeps the last
+# line reachable. scroll_max_lines reads the CACHED wrapped lines
+# (O(lines)); the old scroll_max(rart, feed) re-ran the full reader
+# pipeline per keypress.
+def reader_vis_lines() -> U32: 22
+
 def scroll_max_pick(+le: Bool, +n: U32) -> U32:
   match le:
     case True{}: 0
-    case False{}: U32.sub(n, 34)
+    case False{}: U32.sub(n, reader_vis_lines())
 
 def scroll_max_lines(+rlines: List<&2, String>) -> U32:
   +n = list_len_str(rlines)
-  scroll_max_pick(U32.is_le(n, 34), n)
+  scroll_max_pick(U32.is_le(n, reader_vis_lines()), n)
 
 def scroll_down_pick(+le: Bool, +cur: U32) -> U32:
   match le:
@@ -1324,36 +1349,65 @@ def theme_name(+t: U32) -> String:
     case 4: "saved"
     case _: "all"
 
-def draw_theme_sub(+d: Nat, img: Image, +x: U32, +y: U32, +theme: U32, +th: Theme) -> Image:
-  match th:
-    case T{_, _, _, _, dim}:
-      draw_text(theme_name(theme), d, img, U32.add(x, 8), U32.add(y, 24), dim)
+# ---------- layout (design/mockup.html, variant A) ----------
+# Canvas 1024x1024. Top bar 0..24, status bar 999..1024 (app.bend).
+# Band 1 panes y 40..548: sidebar x 8..208 holds Themes (y 40..212),
+# Profile (y 228..332) and Saved (y 348..548); Items x 216..1016. Band 2 panes y 564..992: Reader
+# x 8..508, Terminal x 516..1016. Pane titles sit on the top border, so
+# their glyphs reach 6px above each pane. app.bend's click/hover rects
+# read the lay_* functions below, so hit-testing follows the layout.
+def lay_theme_row_y(+i: U32) -> U32: U32.add(56, U32.mul(i, 30))
+def lay_theme_row_x() -> U32: 10
+def lay_theme_row_w() -> U32: 196
+def lay_theme_row_h() -> U32: 24
+def lay_band2_y() -> U32: 564
+def lay_band2_h() -> U32: 428
+def lay_reader_x() -> U32: 8
+def lay_term_x() -> U32: 516
+def lay_pane2_w() -> U32: 500
 
-# Saved articles render distinctly: a "SAVED" tag in the tile's accent
-# color, bottom-right.
-def draw_saved_tag_go(+d: Nat, img: Image, +x: U32, +y: U32, saved: Bool, +th: Theme) -> Image:
-  match saved:
-    case False{}: img
-    case True{}:
-      match th:
-        case T{_, _, accent, _, _}:
-          draw_text("SAVED", d, img, U32.add(x, 224), U32.add(y, 100), accent)
+# ---------- items list ----------
+# Two-line rows, 56px pitch: title + theme tag, then the note (or the
+# saved article's URL) dimmed. Rows start below the pane's top border.
+def item_row_y(+i: U32) -> U32: U32.add(56, U32.mul(i, 56))
 
-def draw_saved_tag(+d: Nat, img: Image, +x: U32, +y: U32, +theme: U32, +th: Theme) -> Image:
-  draw_saved_tag_go(d, img, x, y, U32.is_eq(theme, 4), th)
+def item_meta_go(+no_note: Bool, +note: String, +url: String) -> String:
+  match no_note:
+    case True{}: url
+    case False{}: note
 
-# Grid: 2 columns, tiles 280x120, 16px gaps, origin (416, 104).
+def item_meta(+note: String, +url: String) -> String:
+  item_meta_go(String.eq(note, ""), note, url)
+
+def item_rule_go(+last: Bool, +d: Nat, img: Image, +y: U32) -> Image:
+  match last:
+    case True{}: img
+    case False{}: fill_rect(d, img, 230, U32.add(y, 50), 772, 1, col_line())
+
+def draw_item_row(+d: Nat, img: Image, +i: U32, +title: String, +theme: U32, +note: String, +url: String) -> Image:
+  +y = item_row_y(i)
+  +tname = theme_name(theme)
+  +tx = U32.sub(1002, U32.add(text_width(tname), 14))
+  +i1 = draw_text(ui_fit_px(title, U32.sub(tx, 250)), d, img, 230, U32.add(y, 12), col_text())
+  +i2 = draw_text(sym_dot(), d, i1, tx, U32.add(y, 12), theme_color(theme))
+  +i3 = draw_text(tname, d, i2, U32.add(tx, 14), U32.add(y, 12), col_sub())
+  +i4 = draw_text(ui_fit(item_meta(note, url), 120n), d, i3, 230, U32.add(y, 30), col_sub())
+  item_rule_go(U32.is_eq(i, 7), d, i4, y)
+
 # (items first: Bend termination needs the shrinking arg first.)
 def draw_item_tiles(+items: List<&2, Item>, +d: Nat, img: Image, +th: Theme, +idx: U32) -> Image:
   match items:
     case Nil{}: img
-    case It{title, theme, _, _, _} <> rest:
-      +x = U32.add(416, U32.mul(U32.mod(idx, 2), 296))
-      +y = U32.add(104, U32.mul(U32.div(idx, 2), 136))
-      +img2 = ui_tile(d, img, rect(x, y, 280, 120), title, th)
-      +img3 = draw_theme_sub(d, img2, x, y, theme, th)
-      +img4 = draw_saved_tag(d, img3, x, y, theme, th)
-      draw_item_tiles(rest, d, img4, th, U32.add(idx, 1))
+    case It{title, theme, note, _, url} <> rest:
+      draw_item_tiles(rest, d, draw_item_row(d, img, idx, title, theme, note, url), th, U32.add(idx, 1))
+
+def items_empty_go(+empty: Bool, +d: Nat, img: Image) -> Image:
+  match empty:
+    case False{}: img
+    case True{}:
+      +i1 = draw_text("No items here.", d, img, 230, 74, col_sub())
+      +i2 = draw_text("a", d, i1, 230, 98, col_accent())
+      draw_text("add one, or 1 to show all themes", d, i2, 248, 98, col_faint())
 
 # Render shell for a given theme selection (0=all, 1=home design, 2=gaming, 3=Nov trip).
 def is_sel0(+s: U32) -> Bool:
@@ -1389,7 +1443,7 @@ def draw_lines(+d: Nat, lines: List<&2, String>, img: Image, +x: U32, +y: U32, +
     case _, 0: img
     case Nil{}, _: img
     case l <> rest, m:
-      draw_lines(d, rest, draw_text(l, d, img, x, y, color), x, U32.add(y, 14), U32.sub(m, 1), color)
+      draw_lines(d, rest, draw_text(l, d, img, x, y, color), x, U32.add(y, 18), U32.sub(m, 1), color)
 
 # Clip-aware variant for the reader tile (Wave 4): article lines are
 # unbounded user data. In the full-frame path rightward overflow was
@@ -1414,11 +1468,32 @@ def reader_title(+rfocus: Bool, +rart: U32) -> String:
     case True{}: String.append(reader_title_base(rart), " [reading]")
     case False{}: reader_title_base(rart)
 
+# Reader pane. The article's first line (its heading, at scroll 0) is bright
+# with an accent rule; body lines follow; the source URL sits at the foot.
+# Lines clip to the pane interior.
+def reader_head_rule(+first: Bool, +d: Nat, img: Image, +y: U32, +w: U32) -> Image:
+  match first:
+    case True{}: fill_rect(d, img, 22, U32.add(y, 13), w, 1, col_accent())
+    case False{}: img
+
+def reader_lines_go(+d: Nat, +lines: List<&2, String>, img: Image, +y: U32, +n: U32, +first: Bool) -> Image:
+  match lines, n:
+    case _, 0: img
+    case Nil{}, _: img
+    case l <> rest, m:
+      +i1 = draw_text_clipped(l, d, img, 22, y, ui_pick(first, col_text(), col_body()), 9, 565, 507, 991)
+      +i2 = reader_head_rule(first, d, i1, y, u32_min(text_width(l), 472))
+      reader_lines_go(d, rest, i2, U32.add(y, 16), U32.sub(m, 1), False{})
+
+def reader_pane_right(+rart: U32) -> String:
+  String.append(U32.show(U32.add(rart, 1)), String.append("/", U32.show(reader_n_arts())))
+
 def shell_reader_tile(+d: Nat, img: Image, +r: Rect, +th: Theme, +vs: ViewSt) -> Image:
-  match r, th, vs:
-    case R{x, y, w, h}, T{_, _, _, _, dim}, VSt{_, rfocus, rart, rscroll, rlines}:
-      +img2 = ui_tile(d, img, r, reader_title(rfocus, rart), th)
-      draw_lines_clipped(d, drop_str(rlines, rscroll), img2, U32.add(x, 8), U32.add(y, 30), 34, dim, x, y, U32.add(x, w), U32.add(y, h))
+  match vs:
+    case VSt{_, rfocus, rart, rscroll, rlines}:
+      +i1 = ui_pane(d, img, r, "Reader", reader_pane_right(rart), rfocus)
+      +i2 = reader_lines_go(d, drop_str(rlines, rscroll), i1, 588, reader_vis_lines(), U32.is_eq(rscroll, 0))
+      draw_text(ui_fit(reader_art_url(rart), 76n), d, i2, 22, 968, col_faint())
 
 def shell_term_demo() -> Term:
   +t0 = term_new()
@@ -1461,23 +1536,62 @@ def term_title_sb(+base: String, +off: U32) -> String:
     case 0: base
     case _: String.append(base, " [sb]")
 
-def shell_term_tile(+d: Nat, img: Image, +r: Rect, +th: Theme, +t: Term, +tfocus: Bool, +tab_idx: U32, +tab_count: U32) -> Image:
-  match r, th:
-    case R{x, y, _, _}, T{_, _, _, text, _}:
-      +img2 = ui_tile(d, img, r, term_title_sb(term_title(tfocus, tab_idx, tab_count), term_view_off(t)), th)
-      +img3 = draw_text(tab_strip(tab_idx, tab_count), d, img2, U32.add(x, 8), U32.add(y, 32), text)
-      term_render_vp(d, t, img3, U32.add(x, 8), U32.add(y, 54), 30n, 30n)
+# Terminal pane: darker well for the 80x24 grid, title marks focus and the
+# scrollback viewer, tab numbers sit on the right border (active in accent).
+def term_pane_title_sb(+off: U32) -> String:
+  match off:
+    case 0: "Terminal"
+    case _: "Terminal - scrollback"
 
-# Page indicator under the top bar, above the grid.
+def tabs_str_go(n: Nat, +i: U32, +acc: String) -> String:
+  match n:
+    case 0n: acc
+    case 1n+m: tabs_str_go(m, U32.add(i, 1), String.append(acc, String.append(" ", U32.show(U32.add(i, 1)))))
+
+# "1 2 3" for k tabs (no leading space).
+def tabs_str(+k: U32) -> String:
+  String.drop(tabs_str_go(U32.to_nat(k), 0, ""), 1n)
+
+def tabs_prefix(+active: U32) -> String:
+  match active:
+    case 0: ""
+    case _: String.append(tabs_str(active), " ")
+
+def term_tabs_label(+d: Nat, img: Image, +xr: U32, +y: U32, +active: U32, +count: U32) -> Image:
+  +s = tabs_str(count)
+  +x0 = U32.sub(xr, text_width(s))
+  +i1 = ui_border_label(d, img, x0, y, s, col_bg(), col_faint())
+  draw_text(U32.show(U32.add(active, 1)), d, i1, U32.add(x0, text_width(tabs_prefix(active))), U32.sub(y, 6), col_accent())
+
+def shell_term_tile(+d: Nat, img: Image, +r: Rect, +th: Theme, +t: Term, +tfocus: Bool, +tab_idx: U32, +tab_count: U32) -> Image:
+  match r:
+    case R{x, y, w, h}:
+      +i1 = fill_rect(d, img, U32.add(x, 1), U32.add(y, 1), U32.sub(w, 2), 11, col_bg())
+      +i2 = fill_rect(d, i1, U32.add(x, 1), U32.add(y, 12), U32.sub(w, 2), U32.sub(h, 13), col_term_bg())
+      +i3 = ui_box(d, i2, x, y, w, h, ui_pick(tfocus, col_accent(), col_line()))
+      +i3b = ui_border_label(d, i3, U32.add(x, 12), y, term_pane_title_sb(term_view_off(t)), col_bg(), ui_pick(tfocus, col_accent(), col_sub()))
+      +i4 = term_tabs_label(d, i3b, U32.sub(U32.add(x, w), 12), y, tab_idx, tab_count)
+      term_render_vp(d, t, i4, U32.add(x, 10), U32.add(y, 18), 80n, 24n)
+
+# Page indicator on the items pane's right border.
 def page_label_text(+pg: U32, +count: U32) -> String:
   match count:
-    case 0: "No items"
-    case _: String.append("Page ", String.append(U32.show(U32.add(pg, 1)), String.append("/", U32.show(count))))
+    case 0: "empty"
+    case _: String.append("page ", String.append(U32.show(U32.add(pg, 1)), String.append("/", U32.show(count))))
 
-def draw_page_label(+d: Nat, img: Image, +th: Theme, +pg: U32, +count: U32) -> Image:
-  match th:
-    case T{_, _, _, text, _}:
-      draw_text(page_label_text(pg, count), d, img, 416, 76, text)
+def items_pane_title(+sel: U32) -> String:
+  match sel:
+    case 0: "Items"
+    case _: String.append("Items / ", theme_name(U32.sub(sel, U32.div(sel, 5))))
+
+def items_pager_go(+many: Bool, +d: Nat, img: Image) -> Image:
+  match many:
+    case False{}: img
+    case True{}:
+      +i1 = draw_text(",", d, img, 230, 524, col_accent())
+      +i2 = draw_text("prev", d, i1, 242, 524, col_faint())
+      +i3 = draw_text(".", d, i2, 284, 524, col_accent())
+      draw_text("next", d, i3, 296, 524, col_faint())
 
 # Reader and terminal tiles sit at a FIXED y=512 below the 3-row item grid:
 # 512+496=1008 < 1024, so they can never be pushed off-screen.
@@ -1517,83 +1631,123 @@ def dirty_bit(+m: U32, +bit: U32, +cond: Bool) -> U32:
     case True{}: U32.or(m, bit)
     case False{}: m
 
-# Top bar: full-width fill (self-clearing) + title text.
+# Region rects (paint-disjoint; each redraw clears its whole rect first):
+#   top    x 0..1024  y 0..32      side   x 0..212     y 32..556
+#   items  x 212..1024 y 32..556   reader x 0..512     y 556..1024
+#   term   x 512..1024 y 556..1024
+# The status bar (app.bend) is drawn over y 999..1024 after the regions on
+# every rebuild, so the bottom regions clear to the canvas edge.
+
+# Top bar: bar fill + hairline + gutter (self-clearing), then the brand and
+# the current profile.
 def shell_region_top(+d: Nat, img: Image, +th: Theme, +profile: String) -> Image:
-  +img1 = fill_rect(d, img, 0, 0, 1024, 48, rgb(24, 28, 36))
-  draw_text(String.append("Shell-OS :: ", profile), d, img1, 16, 16, rgb(230, 230, 230))
+  +i1 = fill_rect(d, img, 0, 0, 1024, 24, col_bar())
+  +i2 = fill_rect(d, i1, 0, 24, 1024, 1, col_line())
+  +i3 = fill_rect(d, i2, 0, 25, 1024, 7, col_bg())
+  +i4 = draw_text(sym_diamond(), d, i3, 12, 6, col_accent())
+  +i5 = draw_text("shell-os", d, i4, 26, 6, col_text())
+  +i6 = draw_text("/", d, i5, 86, 6, col_faint())
+  +i7 = draw_text(ui_fit(profile, 40n), d, i6, 98, 6, col_sub())
+  ui_text_right("pure Bend", d, i7, 1012, 6, col_faint())
 
-# Sidebars: both panel fills are self-clearing; labels clip to their panel.
+# A selectable sidebar row: selection = tinted fill + accent bar; hover
+# (when not selected) = a faint fill.
+def side_row_bg(+sel: Bool, +hov: Bool) -> U32:
+  match sel:
+    case True{}: col_selbg()
+    case False{}: ui_pick(hov, col_keycap(), col_bg())
+
+def side_row_bar(+sel: Bool, +d: Nat, img: Image, +y: U32) -> Image:
+  match sel:
+    case True{}: fill_rect(d, img, 10, y, 2, 24, col_accent())
+    case False{}: img
+
+def side_theme_row(+d: Nat, img: Image, +i: U32, +name: String, +color: U32, +n: U32, +sel: Bool, +hov: Bool) -> Image:
+  +y = lay_theme_row_y(i)
+  +i1 = fill_rect(d, img, 10, y, 196, 24, side_row_bg(sel, hov))
+  +i2 = side_row_bar(sel, d, i1, y)
+  +i3 = draw_text(sym_dot(), d, i2, 22, U32.add(y, 6), color)
+  +i4 = draw_text(name, d, i3, 36, U32.add(y, 6), ui_pick(sel, col_text(), col_body()))
+  ui_text_right(U32.show(n), d, i4, 196, U32.add(y, 6), ui_pick(sel, col_sub(), col_faint()))
+
+def side_profile_row(+d: Nat, img: Image, +i: U32, +name: String, +cur: Bool) -> Image:
+  +y = U32.add(244, U32.mul(i, 28))
+  +i1 = fill_rect(d, img, 10, y, 196, 24, side_row_bg(cur, False{}))
+  +i2 = side_row_bar(cur, d, i1, y)
+  draw_text(name, d, i2, 22, U32.add(y, 6), ui_pick(cur, col_text(), col_body()))
+
+# Saved articles, newest save order as stored; up to 8 titles.
+def side_saved_rows(+items: List<&2, Item>, +go: Bool, +d: Nat, img: Image, +i: U32) -> Image:
+  match items, go:
+    case Nil{}, _: img
+    case _, False{}: img
+    case It{title, _, _, _, _} <> rest, True{}:
+      +y = U32.add(366, U32.mul(i, 20))
+      +i1 = draw_text(sym_dot(), d, img, 22, y, col_cyan())
+      side_saved_rows(rest, U32.is_lt(U32.add(i, 1), 8), d, draw_text(ui_fit(title, 26n), d, i1, 36, y, col_body()), U32.add(i, 1))
+
+def side_saved_empty(+empty: Bool, +d: Nat, img: Image) -> Image:
+  match empty:
+    case False{}: img
+    case True{}:
+      +i1 = draw_text("Nothing saved yet.", d, img, 22, 366, col_faint())
+      +i2 = draw_text("s", d, i1, 22, 386, col_accent())
+      draw_text("in the reader saves one", d, i2, 34, 386, col_faint())
+
+# Sidebar: Themes pane (counts per theme), Profile pane, Saved pane.
 def shell_region_side(+d: Nat, img: Image, +th: Theme, +sel_idx: U32, +items: List<&2, Item>, +hover: U32, +profile: String) -> Image:
-  +img3 = ui_panel(d, img, rect(0, 48, 200, 976), th)
-  +img4 = ui_label(d, img3, rect(0, 48, 200, 40), "Profile", th)
-  +img5 = ui_label(d, img4, rect(0, 88, 200, 40), profile, th)
-  +n_all = list_len_item(items)
-  +n_home = list_len_item(filter_items(items, 1))
-  +n_game = list_len_item(filter_items(items, 2))
-  +n_trip = list_len_item(filter_items(items, 3))
-  +n_saved = list_len_item(filter_items(items, 5))
-  +img6 = ui_label(d, img5, rect(0, 140, 200, 40), String.append("Items: ", U32.show(n_all)), th)
-  +img7 = ui_label(d, img6, rect(0, 180, 200, 40), String.append("home: ", U32.show(n_home)), th)
-  +img8 = ui_label(d, img7, rect(0, 220, 200, 40), String.append("gaming: ", U32.show(n_game)), th)
-  +img9 = ui_label(d, img8, rect(0, 260, 200, 40), String.append("trip: ", U32.show(n_trip)), th)
-  +img9b = ui_label(d, img9, rect(0, 300, 200, 40), String.append("saved: ", U32.show(n_saved)), th)
-  +img10 = ui_panel(d, img9b, rect(200, 48, 200, 976), th)
-  +img11 = ui_label(d, img10, rect(200, 48, 200, 40), "Themes", th)
-  +img12 = ui_button(d, img11, rect(208, 96, 184, 32), "all", th, is_sel0(sel_idx), ui_hovered(hover, 1))
-  +img13 = ui_button(d, img12, rect(208, 132, 184, 32), "home design", th, is_sel1(sel_idx), ui_hovered(hover, 2))
-  +img14 = ui_button(d, img13, rect(208, 168, 184, 32), "gaming", th, is_sel2(sel_idx), ui_hovered(hover, 3))
-  +img15 = ui_button(d, img14, rect(208, 204, 184, 32), "Nov trip", th, is_sel3(sel_idx), ui_hovered(hover, 4))
-  ui_button(d, img15, rect(208, 240, 184, 32), "saved", th, is_sel5(sel_idx), ui_hovered(hover, 5))
+  +i1 = ui_pane(d, img, rect(8, 40, 200, 172), "Themes", "1-5", False{})
+  +i2 = side_theme_row(d, i1, 0, "all", theme_color(0), list_len_item(items), is_sel0(sel_idx), ui_hovered(hover, 1))
+  +i3 = side_theme_row(d, i2, 1, "home design", theme_color(1), list_len_item(filter_items(items, 1)), is_sel1(sel_idx), ui_hovered(hover, 2))
+  +i4 = side_theme_row(d, i3, 2, "gaming", theme_color(2), list_len_item(filter_items(items, 2)), is_sel2(sel_idx), ui_hovered(hover, 3))
+  +i5 = side_theme_row(d, i4, 3, "Nov trip", theme_color(3), list_len_item(filter_items(items, 3)), is_sel3(sel_idx), ui_hovered(hover, 4))
+  +i6 = side_theme_row(d, i5, 4, "saved", theme_color(5), list_len_item(filter_items(items, 5)), is_sel5(sel_idx), ui_hovered(hover, 5))
+  +i7 = ui_pane(d, i6, rect(8, 228, 200, 104), "Profile", "p", False{})
+  +i8 = side_profile_row(d, i7, 0, "default", String.eq(profile, "default"))
+  +i9 = side_profile_row(d, i8, 1, "work", String.eq(profile, "work"))
+  +i10 = side_profile_row(d, i9, 2, "personal", String.eq(profile, "personal"))
+  +saved = filter_items(items, 5)
+  +i11 = ui_pane(d, i10, rect(8, 348, 200, 200), "Saved", U32.show(list_len_item(saved)), False{})
+  +i12 = side_saved_rows(saved, True{}, d, i11, 0)
+  side_saved_empty(U32.is_eq(list_len_item(saved), 0), d, i12)
 
-# Item grid + page label. The page label is bare text on the background, so
-# the dirty variant clears the region rect first; tile panels are
-# self-clearing and tile titles clip to their tile (ui_label).
+# Items pane: filtered, paged list (8 per page) with the page on the border.
 def shell_region_items(+d: Nat, img: Image, +th: Theme, +sel_idx: U32, +items: List<&2, Item>, +vs: ViewSt) -> Image:
   +shown = filter_items(items, sel_idx)
   +count = page_count(list_len_item(shown))
   +pg = page_clamp(viewst_page(vs), count)
-  +paged = take_items(drop_items(shown, U32.mul(pg, 6)), 6)
-  +img2 = draw_item_tiles(paged, d, img, th, 0)
-  draw_page_label(d, img2, th, pg, count)
+  +paged = take_items(drop_items(shown, U32.mul(pg, 8)), 8)
+  +i1 = ui_pane(d, img, rect(216, 40, 800, 508), items_pane_title(sel_idx), page_label_text(pg, count), False{})
+  +i2 = draw_item_tiles(paged, d, i1, th, 0)
+  +i3 = items_empty_go(U32.is_eq(count, 0), d, i2)
+  items_pager_go(U32.is_lt(1, count), d, i3)
 
-# Items region rect: x 416..1024, y 48..496 (page label + 3 tile rows plus the
-# right-edge strip to the canvas edge, which the full render covers only via
-# its base fill; the strip must be re-cleared here for all-dirty parity).
 def shell_dirty_items(+d: Nat, img: Image, +th: Theme, +sel_idx: U32, +items: List<&2, Item>, +vs: ViewSt) -> Image:
-  shell_region_items(d, fill_rect(d, img, 416, 48, 608, 448, rgb(16, 18, 24)), th, sel_idx, items, vs)
+  shell_region_items(d, fill_rect(d, img, 212, 32, 812, 524, col_bg()), th, sel_idx, items, vs)
 
-# Side region rect: x 0..416, y 48..1024 (both sidebar panels plus the
-# 16px strip between the themes panel and the item grid, base-fill-only
-# in the full render).
 def shell_dirty_side(+d: Nat, img: Image, +th: Theme, +sel_idx: U32, +items: List<&2, Item>, +hover: U32, +profile: String) -> Image:
-  shell_region_side(d, fill_rect(d, img, 0, 48, 416, 976, rgb(16, 18, 24)), th, sel_idx, items, hover, profile)
+  shell_region_side(d, fill_rect(d, img, 0, 32, 212, 524, col_bg()), th, sel_idx, items, hover, profile)
 
 def shell_region_reader(+d: Nat, img: Image, +th: Theme, +vs: ViewSt) -> Image:
-  shell_reader_tile(d, img, rect(416, 512, 280, 496), th, vs)
+  shell_reader_tile(d, img, rect(lay_reader_x(), lay_band2_y(), lay_pane2_w(), lay_band2_h()), th, vs)
 
-# Terminal tile: ui_tile's panel fill is self-clearing; the tab strip and
-# viewport grid are bounded by construction.
 def shell_region_term(+d: Nat, img: Image, +th: Theme, +t: Term, +tfocus: Bool, +tab_idx: U32, +tab_count: U32) -> Image:
-  shell_term_tile(d, img, rect(712, 512, 280, 496), th, t, tfocus, tab_idx, tab_count)
+  shell_term_tile(d, img, rect(lay_term_x(), lay_band2_y(), lay_pane2_w(), lay_band2_h()), th, t, tfocus, tab_idx, tab_count)
 
 def shell_render(+d: Nat, +sel_idx: U32, +items: List<&2, Item>, +t: Term, +tfocus: Bool, +vs: ViewSt, +hover: U32, +tab_idx: U32, +tab_count: U32, +profile: String) -> Image:
   +th = theme_dark()
-  +img = solid_tree(d, rgb(16, 18, 24))
+  +img = solid_tree(d, col_bg())
   +i1 = shell_region_top(d, img, th, profile)
   +i2 = shell_region_side(d, i1, th, sel_idx, items, hover, profile)
   +i3 = shell_region_items(d, i2, th, sel_idx, items, vs)
   +i4 = shell_region_reader(d, i3, th, vs)
   shell_region_term(d, i4, th, t, tfocus, tab_idx, tab_count)
 
-# Reader region rect: x 416..712, y 496..1024 (reader tile plus gutters to
-# the items region above, the terminal tile, and the canvas bottom).
 def shell_dirty_reader(+d: Nat, img: Image, +th: Theme, +vs: ViewSt) -> Image:
-  shell_region_reader(d, fill_rect(d, img, 416, 496, 296, 528, rgb(16, 18, 24)), th, vs)
+  shell_region_reader(d, fill_rect(d, img, 0, 556, 512, 468, col_bg()), th, vs)
 
-# Terminal region rect: x 696..1024, y 496..1024 (terminal tile plus gutters
-# to the reader tile, the items region above, and the canvas edges).
 def shell_dirty_term(+d: Nat, img: Image, +th: Theme, +t: Term, +tfocus: Bool, +tab_idx: U32, +tab_count: U32) -> Image:
-  shell_region_term(d, fill_rect(d, img, 696, 496, 328, 528, rgb(16, 18, 24)), th, t, tfocus, tab_idx, tab_count)
+  shell_region_term(d, fill_rect(d, img, 512, 556, 512, 468, col_bg()), th, t, tfocus, tab_idx, tab_count)
 
 # Conditional region application, in draw order (layering preserved).
 def dirty_top_go(+go: Bool, +d: Nat, img: Image, +th: Theme, +profile: String) -> Image:

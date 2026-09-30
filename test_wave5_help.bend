@@ -122,11 +122,27 @@ def h5_t11() -> String:
   String.append(h5_check("table-ctx1", U32.is_lt(0, help_count(help_binds_for(1)))),
   h5_check("table-ctx8", U32.is_lt(0, help_count(help_binds_for(8))))))
 
+# t12: opening and closing help marks the frame touched, so it repaints
+# (it was invisible in native builds while accd was preserved).
+def h5_t12_open(r: (AccSt & Bool)) -> Bool:
+  match r:
+    case (acc, _): acc_is_touched(acc)
+
+def h5_t12() -> String:
+  String.append(h5_check("help-open-repaints", h5_t12_open(acc_scan_key(h5_acc_closed(), Nil{}, 63, False{}, 0, h5_vs(), "", Nil{}))),
+  h5_check("help-close-repaints", acc_is_touched(acc_help_close(h5_acc_help(0)))))
+
+# t13: keys are stripped from the normal keymap while help is open and on
+# the key that closes it (Esc closing help used to quit the app).
+def h5_t13() -> String:
+  String.append(h5_check("help-open-strips-keys", acc_strip_q(h5_acc_help(0), h5_acc_help(0))),
+  h5_check("help-close-strips-esc", acc_strip_q(h5_acc_help(0), acc_help_close(h5_acc_help(0)))))
+
 def h5_main() -> String:
   String.append(h5_t1(), String.append(h5_t2(), String.append(h5_t3(),
   String.append(h5_t4(), String.append(h5_t5(), String.append(h5_t6(),
   String.append(h5_t7(), String.append(h5_t8(), String.append(h5_t9(),
-  String.append(h5_t10(), h5_t11()))))))))))
+  String.append(h5_t10(), String.append(h5_t11(), String.append(h5_t12(), h5_t13()))))))))))))
 
 def main() -> IO(Unit):
   do IO<Unit>:

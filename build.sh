@@ -55,12 +55,12 @@ sync_effs() {
 }
 
 bundle_app() {
-  cat font.bend img.bend ui.bend reader.bend term.bend shell.bend pty.bend sock.bend search.bend gmail.bend ai.bend app.bend > build/app_all.bend
+  cat font6x12.bend img.bend ui.bend reader.bend term.bend shell.bend pty.bend sock.bend search.bend gmail.bend ai.bend app.bend > build/app_all.bend
   sync_effs
 }
 
 bundle_render() {
-  cat font.bend img.bend ui.bend reader.bend term.bend shell.bend render_main.bend > build/render_all.bend
+  cat font6x12.bend img.bend ui.bend reader.bend term.bend shell.bend render_main.bend > build/render_all.bend
   sync_effs
 }
 

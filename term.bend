@@ -4,22 +4,22 @@
 # 16 ANSI colors (0-7 normal, 8-15 bright)
 def ansi_color(idx: U32) -> U32:
   match idx:
-    case 0: rgb(0, 0, 0)        # black
-    case 1: rgb(170, 0, 0)      # red
-    case 2: rgb(0, 170, 0)      # green
-    case 3: rgb(170, 85, 0)     # yellow
-    case 4: rgb(0, 0, 170)      # blue
-    case 5: rgb(170, 0, 170)    # magenta
-    case 6: rgb(0, 170, 170)    # cyan
-    case 7: rgb(170, 170, 170)  # white
-    case 8: rgb(85, 85, 85)     # bright black
-    case 9: rgb(255, 85, 85)    # bright red
-    case 10: rgb(85, 255, 85)   # bright green
-    case 11: rgb(255, 255, 85)  # bright yellow
-    case 12: rgb(85, 85, 255)   # bright blue
-    case 13: rgb(255, 85, 255)  # bright magenta
-    case 14: rgb(85, 255, 255)  # bright cyan
-    case _: rgb(255, 255, 255)  # bright white
+    case 0: rgb(21, 22, 30)       # black
+    case 1: rgb(247, 118, 142)    # red
+    case 2: rgb(158, 206, 106)    # green
+    case 3: rgb(224, 175, 104)    # yellow
+    case 4: rgb(122, 162, 247)    # blue
+    case 5: rgb(187, 154, 247)    # magenta
+    case 6: rgb(125, 207, 255)    # cyan
+    case 7: rgb(192, 198, 214)    # white (default fg)
+    case 8: rgb(77, 85, 105)      # bright black
+    case 9: rgb(255, 137, 159)    # bright red
+    case 10: rgb(185, 230, 136)   # bright green
+    case 11: rgb(240, 200, 130)   # bright yellow
+    case 12: rgb(150, 184, 255)   # bright blue
+    case 13: rgb(206, 180, 255)   # bright magenta
+    case 14: rgb(160, 222, 255)   # bright cyan
+    case _: rgb(232, 236, 245)    # bright white
 
 # Terminal state: grid of chars + colors, cursor pos, current fg/bg,
 # plus a bounded scrollback buffer (sb): lines that scrolled off the top,
@@ -280,60 +280,51 @@ def term_write(s: String, +t: Term) -> Term:
     case SNil{}: t
     case SCon{_, _}: term_write_go(s, term_view_live(t))
 
-# Render terminal to image: 80x24 grid, 8x8 font = 640x192.
-def render_cells(+d: Nat, +tbl: List<&2, U32>, +cells: List<&2, U32>, img: Image, +ox: U32, +oy: U32, +idx: U32) -> Image:
-  match cells:
-    case Nil{}: img
-    case cell <> rest:
-      +ch = U32.and(cell, U32.mul(255, 257))  # low 16 bits (255*257 = 65535)
-      +fg_idx = U32.and(U32.shrn(cell, 16n), 255)
-      +bg_idx = U32.and(U32.shrn(cell, 24n), 255)
-      +fg = ansi_color(fg_idx)
-      +bg = ansi_color(bg_idx)
-      +x = U32.mul(U32.mod(idx, 80), 8)
-      +y = U32.mul(U32.div(idx, 80), 8)
-      +px = U32.add(ox, x)
-      +py = U32.add(oy, y)
-      # draw bg rect then glyph
-      +img2 = fill_rect(d, img, px, py, 8, 8, bg)
-      +img3 = blit_glyph(tbl, d, img2, px, py, ch, fg)
-      render_cells(d, tbl, rest, img3, ox, oy, U32.add(idx, 1))
+# Render terminal to image: 80x24 grid of 6x16 cells (6x12 glyph, 2px
+# leading above and below) = 480x384. Background index 0 is the pane's own
+# well (drawn by the caller) and space/NUL glyphs draw nothing, so blank
+# cells cost almost nothing.
+def term_cell_bg(+plain: Bool, +d: Nat, img: Image, +px: U32, +py: U32, +bgi: U32) -> Image:
+  match plain:
+    case True{}: img
+    case False{}: fill_rect(d, img, px, py, 6, 16, ansi_color(bgi))
+
+def term_cell_glyph(+blank: Bool, +d: Nat, img: Image, +px: U32, +py: U32, +ch: U32, +fgi: U32) -> Image:
+  match blank:
+    case True{}: img
+    case False{}: blit_glyph(d, img, px, U32.add(py, 2), ch, ansi_color(fgi))
+
+def draw_vp_cell(+d: Nat, +cell: U32, img: Image, +px: U32, +py: U32) -> Image:
+  +ch = U32.and(cell, U32.mul(255, 257))  # low 16 bits
+  +fgi = U32.and(U32.shrn(cell, 16n), 255)
+  +bgi = U32.and(U32.shrn(cell, 24n), 255)
+  +i1 = term_cell_bg(U32.is_eq(bgi, 0), d, img, px, py, bgi)
+  term_cell_glyph(Bool.or(U32.is_eq(ch, 32), U32.is_eq(ch, 0)), d, i1, px, py, ch, fgi)
+
+# Linear walk over the grid (row-major): cell idx lands at column idx%80,
+# pixel row (idx/80 + shift). Stops after `last` cells.
+def vp_cells_go(+cells: List<&2, U32>, +go: Bool, +d: Nat, img: Image, +ox: U32, +oy: U32, +idx: U32, +last: U32, +shift: U32) -> Image:
+  match cells, go:
+    case Nil{}, _: img
+    case _, False{}: img
+    case c <> rest, True{}:
+      +px = U32.add(ox, U32.mul(U32.mod(idx, 80), 6))
+      +py = U32.add(oy, U32.mul(U32.add(U32.div(idx, 80), shift), 16))
+      +nx = U32.add(idx, 1)
+      vp_cells_go(rest, U32.is_lt(nx, last), d, draw_vp_cell(d, c, img, px, py), ox, oy, nx, last, shift)
 
 def term_render(+d: Nat, +t: Term, img: Image, +ox: U32, +oy: U32) -> Image:
   # Full-grid renderer (headless proof path): always the live grid, the
   # scrollback viewer offset applies to the app's viewport renderer below.
   match t:
     case Tm{cells, _, _, _, _, _, _}:
-      render_cells(d, font_data(), cells, img, ox, oy, 0)
+      vp_cells_go(cells, True{}, d, img, ox, oy, 0, 1920, 0)
 
-# Viewport rendering: draw only a cols×rows window of the grid (for tiles).
-# Uses a row/col walk with list_get instead of filtering the full 1920-cell walk.
 def list_get(xs: List<&2, U32>, +idx: U32) -> U32:
   match xs, idx:
     case Nil{}, _: 0
     case h <> _, 0: h
     case _ <> t, i: list_get(t, U32.sub(i, 1))
-
-def draw_vp_cell(+d: Nat, +tbl: List<&2, U32>, +cell: U32, img: Image, +px: U32, +py: U32) -> Image:
-  +ch = U32.and(cell, U32.mul(255, 257))  # low 16 bits
-  +fg = ansi_color(U32.and(U32.shrn(cell, 16n), 255))
-  +bg = ansi_color(U32.and(U32.shrn(cell, 24n), 255))
-  +img2 = fill_rect(d, img, px, py, 8, 8, bg)
-  blit_glyph(tbl, d, img2, px, py, ch, fg)
-
-def vp_row(rem: Nat, +d: Nat, +tbl: List<&2, U32>, +cells: List<&2, U32>, img: Image, +ox: U32, +py: U32, +row: U32, +col: U32) -> Image:
-  match rem:
-    case 0n: img
-    case 1n+m:
-      +cell = list_get(cells, U32.add(U32.mul(row, 80), col))
-      +px = U32.add(ox, U32.mul(col, 8))
-      vp_row(m, d, tbl, cells, draw_vp_cell(d, tbl, cell, img, px, py), ox, py, row, U32.add(col, 1))
-
-def vp_rows(rem: Nat, +d: Nat, +tbl: List<&2, U32>, +cells: List<&2, U32>, img: Image, +ox: U32, +oy: U32, +row: U32, +cols: Nat) -> Image:
-  match rem:
-    case 0n: img
-    case 1n+m:
-      vp_rows(m, d, tbl, cells, vp_row(cols, d, tbl, cells, img, ox, U32.add(oy, U32.mul(row, 8)), row, 0), ox, oy, U32.add(row, 1), cols)
 
 # ---------- scrollback-aware viewport rendering ----------
 # String-list index (out of range -> "", defensive; callers clamp).
@@ -344,37 +335,27 @@ def sb_get(+xs: List<&2, String>, +idx: U32) -> String:
     case _ <> t, i: sb_get(t, U32.sub(i, 1))
 
 # Draw `rem` scrollback text rows: sb[si .. si+rem-1] at pixel rows
-# pr .. pr+rem-1 (8px each). One font-table build for all rows.
-def vp_sb_rows_go(rem: Nat, +d: Nat, +tbl: List<&2, U32>, +sb: List<&2, String>, +si: U32, img: Image, +ox: U32, +oy: U32, +pr: U32) -> Image:
+# pr .. pr+rem-1 (16px each).
+def vp_sb_rows_go(rem: Nat, +d: Nat, +sb: List<&2, String>, +si: U32, img: Image, +ox: U32, +oy: U32, +pr: U32) -> Image:
   match rem:
     case 0n: img
     case 1n+m:
-      vp_sb_rows_go(m, d, tbl, sb, U32.add(si, 1),
-        draw_text_go(sb_get(sb, si), tbl, d, img, ox, U32.add(oy, U32.mul(pr, 8)), ansi_color(7)),
+      vp_sb_rows_go(m, d, sb, U32.add(si, 1),
+        draw_text_go(sb_get(sb, si), d, img, ox, U32.add(U32.add(oy, U32.mul(pr, 16)), 2), ansi_color(7)),
         ox, oy, U32.add(pr, 1))
-
-# Draw `rem` live-grid rows (grid row `row` at pixel row `prow`), the
-# scrollback-shifted tail of the viewport. list_get returns 0 past the
-# 24-row grid, so rows beyond it render blank as before.
-def vp_grid_rows_go(rem: Nat, +d: Nat, +tbl: List<&2, U32>, +cells: List<&2, U32>, img: Image, +ox: U32, +oy: U32, +row: U32, +cols: Nat, +prow: U32) -> Image:
-  match rem:
-    case 0n: img
-    case 1n+m:
-      vp_grid_rows_go(m, d, tbl, cells,
-        vp_row(cols, d, tbl, cells, img, ox, U32.add(oy, U32.mul(prow, 8)), row, 0),
-        ox, oy, U32.add(row, 1), cols, U32.add(prow, 1))
 
 def term_render_vp(+d: Nat, +t: Term, img: Image, +ox: U32, +oy: U32, +cols: Nat, +rows: Nat) -> Image:
   # Scrollback-aware viewport: the top min(off, rows) rows draw scrollback
   # text (oldest first), the remaining rows draw the live grid shifted down.
-  # off = 0 renders exactly the old live view.
+  # off = 0 renders exactly the live view. cols is always the full 80.
   match t:
     case Tm{cells, _, _, _, _, sb, sbo}:
       +sblen = list_len_str(sb)
       +off = u32_min(sbo, sblen)
-      +sbn = U32.to_nat(u32_min(off, nat_to_u32(rows)))
-      +img2 = vp_sb_rows_go(sbn, d, font_data(), sb, U32.sub(sblen, off), img, ox, oy, 0)
-      vp_grid_rows_go(Nat.sub(rows, sbn), d, font_data(), cells, img2, ox, oy, 0, cols, nat_to_u32(sbn))
+      +sbn = u32_min(off, nat_to_u32(rows))
+      +img2 = vp_sb_rows_go(U32.to_nat(sbn), d, sb, U32.sub(sblen, off), img, ox, oy, 0)
+      +last = U32.mul(U32.sub(nat_to_u32(rows), sbn), 80)
+      vp_cells_go(cells, U32.is_lt(0, last), d, img2, ox, oy, 0, last, sbn)
 
 # Append a line (text + newline) to the terminal.
 def nl_str() -> String:
