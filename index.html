@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>shellOS: a desktop where every pixel is computed in Bend</title>
 <meta name="description" content="The Bend series, part 3: a single-window shell (terminal, reader, command palette) rendered pixel by pixel in pure Bend, ported from a Linux VM to macOS, three screen-only bugs fixed, and redesigned.">
-<link rel="canonical" href="https://ckluis.github.io/experiments/bend/shellOS/">
+<link rel="canonical" href="https://ckluis.github.io/shellOS/">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="ckluis / experiments">
-<meta property="og:url" content="https://ckluis.github.io/experiments/bend/shellOS/">
+<meta property="og:url" content="https://ckluis.github.io/shellOS/">
 <meta property="og:title" content="shellOS: a desktop where every pixel is computed in Bend">
 <meta property="og:description" content="Terminal, reader and palette, drawn by a pure Bend program. Ported to a Mac, three bugs its suites missed, then redesigned. Part 3 of the Bend series.">
-<meta property="og:image" content="https://ckluis.github.io/experiments/previews/social-bend-shellos.png">
+<meta property="og:image" content="https://ckluis.github.io/shellOS/assets/social.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="shellOS after the redesign: panes for themes, saved articles, items, the reader and a live terminal.">
@@ -20,18 +20,18 @@
 <meta name="twitter:creator" content="@ckluis">
 <meta name="twitter:title" content="shellOS: a desktop where every pixel is computed in Bend">
 <meta name="twitter:description" content="Terminal, reader and palette, drawn by a pure Bend program. Ported to a Mac, three bugs its suites missed, then redesigned. Part 3 of the Bend series.">
-<meta name="twitter:image" content="https://ckluis.github.io/experiments/previews/social-bend-shellos.png">
+<meta name="twitter:image" content="https://ckluis.github.io/shellOS/assets/social.png">
 <script>document.documentElement.classList.add('js')</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Inter:wght@400;450;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/series.css">
+<link rel="stylesheet" href="assets/series.css">
 </head>
 <body>
 <a href="https://ckluis.github.io/experiments/" class="xa-back" aria-label="Back to all experiments"><span class="xa-arrow">←</span> Experiments</a>
 <header class="hero">
   <div class="wrap">
-    <nav class="rail reveal" aria-label="The Bend series"><span class="rl">The Bend series</span><a href="../index.html"><span class="i">00</span>Series</a><a href="../bocht/index.html"><span class="i">01</span>bocht</a><a href="../bochtCMS/index.html"><span class="i">02</span>bochtCMS</a><a href="../shellOS/index.html" aria-current="page"><span class="i">03</span>shellOS</a></nav>
+    <nav class="rail reveal" aria-label="The Bend series"><span class="rl">The Bend series</span><a href="https://ckluis.github.io/experiments/bend/"><span class="i">00</span>Series</a><a href="https://ckluis.github.io/bocht/"><span class="i">01</span>bocht</a><a href="https://ckluis.github.io/bochtCMS/"><span class="i">02</span>bochtCMS</a><a href="https://ckluis.github.io/shellOS/" aria-current="page"><span class="i">03</span>shellOS</a></nav>
     <div>
       <div class="eyebrow reveal">03 · The desktop · Sept 2026</div>
       <h1 class="reveal d1">shellOS<span class="def">a single-window meta-OS shell · pure Bend</span></h1>
@@ -166,17 +166,17 @@
   <div class="eyebrow reveal">The Bend series</div>
   <h2 class="reveal d1">One language. Three builds. <em>One auditor.</em></h2>
   <p class="intro reveal d2">Three programs, one young language, one method. Each was written by an AI app builder in <a href="https://bend-lang.com" target="_blank" rel="noopener">Bend 2</a> under an evidence-first discipline, then handed to Claude Code to check: reproduce every claim, attack it, profile it, fix only what is proven, and show the fix changed nothing else. Every time, the builder's own tests passed, and something real was still wrong.</p>
-  <div class="scards"><a class="scard reveal" href="../bocht/index.html"><div class="n">01 · bocht</div><div class="t">bocht</div><p>The framework. A whole backend (HTTP, auth, rate limits, WAL storage, MCP) compiled from one Bend program into one binary.</p><div class="m"><span>8,777 lines</span><span>1 binary</span><span>release r61</span></div><div class="go">Read the case study →</div></a><a class="scard reveal" href="../bochtCMS/index.html"><div class="n">02 · bochtCMS</div><div class="t">bochtCMS</div><p>The app on top. A blog CMS whose only interface is seven MCP tools, and the quadratic curve its 43 passing tests never saw.</p><div class="m"><span>7 MCP tools</span><span>1,200× fix</span><span>0 / 90 diffs</span></div><div class="go">Read the case study →</div></a><div class="scard reveal here"><div class="n">03 · shellOS</div><div class="t">shellOS</div><p>The desktop. A single-window shell drawn pixel by pixel in pure Bend: terminal, reader, palette. Ported to a Mac and redesigned.</p><div class="m"><span>9,641 lines</span><span>17 C effects</span><span>3 bugs fixed</span></div><div class="go">You are here</div></div></div>
-  <a class="all reveal" href="../index.html">About the series: the language, the method, what it found →</a>
+  <div class="scards"><a class="scard reveal" href="https://ckluis.github.io/bocht/"><div class="n">01 · bocht</div><div class="t">bocht</div><p>The framework. A whole backend (HTTP, auth, rate limits, WAL storage, MCP) compiled from one Bend program into one binary.</p><div class="m"><span>8,777 lines</span><span>1 binary</span><span>release r61</span></div><div class="go">Read the case study →</div></a><a class="scard reveal" href="https://ckluis.github.io/bochtCMS/"><div class="n">02 · bochtCMS</div><div class="t">bochtCMS</div><p>The app on top. A blog CMS whose only interface is seven MCP tools, and the quadratic curve its 43 passing tests never saw.</p><div class="m"><span>7 MCP tools</span><span>1,200× fix</span><span>0 / 90 diffs</span></div><div class="go">Read the case study →</div></a><div class="scard reveal here"><div class="n">03 · shellOS</div><div class="t">shellOS</div><p>The desktop. A single-window shell drawn pixel by pixel in pure Bend: terminal, reader, palette. Ported to a Mac and redesigned.</p><div class="m"><span>9,641 lines</span><span>17 C effects</span><span>3 bugs fixed</span></div><div class="go">You are here</div></div></div>
+  <a class="all reveal" href="https://ckluis.github.io/experiments/bend/">About the series: the language, the method, what it found →</a>
 </div></section>
 
 <!-- ============================ FOOT ============================ -->
 <footer class="foot"><div class="wrap">
   <h2>A pure program drew it. <em>Screenshots found what the tests couldn't.</em></h2>
   <div class="credits"><div class="credit"><div class="k">Shell</div><p>Generated by an AI app builder in ten days of waves on a Linux VM, from Bend 2.0.18 to 2.0.34.</p></div><div class="credit"><div class="k">Port, fixes, redesign</div><p>Claude Code (Opus 5.5): macOS build and harness, three bug fixes with regression probes, the Panes redesign and readability pass.</p></div><div class="credit"><div class="k">Direction</div><p>Chris Kluis: asked for the port, called the first UI "not very pretty," picked the design, and asked for bigger type.</p></div></div>
-  <div class="links"><a href="https://bend-lang.com" target="_blank" rel="noopener">Bend ↗</a><a href="https://github.com/fcambus/spleen" target="_blank" rel="noopener">Spleen font ↗</a><a href="https://ckluis.github.io/experiments/">All experiments ↗</a></div>
-  <p class="fine">Status: local. Source, harness and screenshots live in a private repository for now. Measured on one Apple-silicon Mac, Bend 2.0.34, 30 Sep 2026.</p>
+  <div class="links"><a href="https://github.com/ckluis/shellOS" target="_blank" rel="noopener">Source on GitHub ↗</a><a href="https://bend-lang.com" target="_blank" rel="noopener">Bend ↗</a><a href="https://github.com/fcambus/spleen" target="_blank" rel="noopener">Spleen font ↗</a><a href="https://ckluis.github.io/experiments/">All experiments ↗</a></div>
+  <p class="fine">Measured on one Apple-silicon Mac, Bend 2.0.34, 30 Sep 2026.</p>
 </div></footer>
-<script src="../assets/series.js"></script>
+<script src="assets/series.js"></script>
 </body>
 </html>

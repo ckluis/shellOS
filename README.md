@@ -1,3 +1,6 @@
+> **Case study:** https://ckluis.github.io/shellOS/ (part 3 of the [Bend series](https://ckluis.github.io/experiments/bend/): [bocht](https://github.com/ckluis/bocht) · [bochtCMS](https://github.com/ckluis/bochtCMS) · [shellOS](https://github.com/ckluis/shellOS)).
+> The page is `index.html` in this repo, served by GitHub Pages from `main`. Below: the package README (macOS section first); the full work log is `REPORT.md`.
+
 # Shell-OS Maximal-Pure — Project Package
 
 Packaged 2026-09-30. Read this whole file, then execute the plan in
@@ -36,7 +39,7 @@ See the last `REPORT.md` section for the full port record.
 tests/run_suites.sh              # pure interpreter suites
 tests/mac_proof.sh [bin] [boots] # native window proofs -> proofs/mac_<stamp>/
 tests/mac_shot.sh [bin] [dir]    # screenshots of the main screens (design review)
-cd somewhere-with-items.txt && ~/Desktop/projects/bend/shellOS/build/shell_pty
+cd somewhere-with-items.txt && /path/to/shellOS/build/shell_pty
 ```
 
 Design: `design/mockup.html` (the picked "Panes" direction) and
