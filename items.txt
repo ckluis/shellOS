@@ -1,0 +1,4 @@
+0|line1\nline2
+1|back\\slash
+2|trail\\
+3|lit\\nseq
