@@ -3939,3 +3939,31 @@ screenshots: `design/screens/` (`before_*.png`, `01..12_*.png`).
 **Honest limits:** Gmail and AI overlays were restyled but not exercised
 live (no configs here). The reader's "Pure Bend" article still quotes the
 old "193 ms / 21x faster than Bun" figures, which were not re-measured.
+
+## 2026-09-30 ~11:55 EDT — Readability pass: Spleen 8x16 on a 1440x960 canvas
+
+User: "the fonts are REALLY small to read". Cause: Bend's macOS window maps
+the canvas at one point per pixel (the Metal drawable is sized in points),
+and the window was on a 6K XDR at "looks like 3008x1692", so the 1024x1024
+canvas used a third of the screen width and 6x12 glyphs came out around
+9-point type. The renderer only maps the image at power-of-two sizes, so
+the window cannot upscale it.
+
+- Font: Spleen 8x16 (`font8x16.bend`, four packed words per glyph); ▸ and
+  ✓ hand-drawn, the other symbols from the font. Text is about 1.4x taller.
+- Canvas: window 1440x960 (fits the 6K XDRs and the 1080p main display),
+  image depth 11. Layout re-derived: profiles back to top-bar pills (as in
+  the mockup), sidebar Themes + Saved, Items 6 per page (back to the
+  original page size; 8 did not fit the band), reader ~78-column wrap and
+  19 visible lines, terminal 80x24 at 8x18 cells, cards 800 wide.
+- The "Pure Bend" article no longer claims "1024 by 1024 in 193 ms, 21x
+  faster than Bun" (stale, unmeasured); it now describes the region
+  rebuild and names the 8x16 font.
+- test_wave4_dirty samples a 32x32 grid over 1440x960 at depth 11;
+  bench_main/render_main render 1440x960.
+
+Verification: build rc 0, 0 warnings; suites wave3 36/36, wave4_dirty
+24/24, wave4_scrollback 20/20, wave5_help 18/18, wave5_notes 11/11;
+`tests/mac_proof.sh` 2 boots PASS (sha256 `84725762…`), promoted binary 1
+boot PASS; mouse: theme-row click filters, terminal click focuses (checked
+by eye); screenshots refreshed in `design/screens/`.

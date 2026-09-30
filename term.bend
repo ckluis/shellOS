@@ -280,19 +280,19 @@ def term_write(s: String, +t: Term) -> Term:
     case SNil{}: t
     case SCon{_, _}: term_write_go(s, term_view_live(t))
 
-# Render terminal to image: 80x24 grid of 6x16 cells (6x12 glyph, 2px
-# leading above and below) = 480x384. Background index 0 is the pane's own
+# Render terminal to image: 80x24 grid of 8x18 cells (8x16 glyph, 1px
+# leading above and below) = 640x432. Background index 0 is the pane's own
 # well (drawn by the caller) and space/NUL glyphs draw nothing, so blank
 # cells cost almost nothing.
 def term_cell_bg(+plain: Bool, +d: Nat, img: Image, +px: U32, +py: U32, +bgi: U32) -> Image:
   match plain:
     case True{}: img
-    case False{}: fill_rect(d, img, px, py, 6, 16, ansi_color(bgi))
+    case False{}: fill_rect(d, img, px, py, 8, 18, ansi_color(bgi))
 
 def term_cell_glyph(+blank: Bool, +d: Nat, img: Image, +px: U32, +py: U32, +ch: U32, +fgi: U32) -> Image:
   match blank:
     case True{}: img
-    case False{}: blit_glyph(d, img, px, U32.add(py, 2), ch, ansi_color(fgi))
+    case False{}: blit_glyph(d, img, px, U32.add(py, 1), ch, ansi_color(fgi))
 
 def draw_vp_cell(+d: Nat, +cell: U32, img: Image, +px: U32, +py: U32) -> Image:
   +ch = U32.and(cell, U32.mul(255, 257))  # low 16 bits
@@ -308,8 +308,8 @@ def vp_cells_go(+cells: List<&2, U32>, +go: Bool, +d: Nat, img: Image, +ox: U32,
     case Nil{}, _: img
     case _, False{}: img
     case c <> rest, True{}:
-      +px = U32.add(ox, U32.mul(U32.mod(idx, 80), 6))
-      +py = U32.add(oy, U32.mul(U32.add(U32.div(idx, 80), shift), 16))
+      +px = U32.add(ox, U32.mul(U32.mod(idx, 80), 8))
+      +py = U32.add(oy, U32.mul(U32.add(U32.div(idx, 80), shift), 18))
       +nx = U32.add(idx, 1)
       vp_cells_go(rest, U32.is_lt(nx, last), d, draw_vp_cell(d, c, img, px, py), ox, oy, nx, last, shift)
 
@@ -335,13 +335,13 @@ def sb_get(+xs: List<&2, String>, +idx: U32) -> String:
     case _ <> t, i: sb_get(t, U32.sub(i, 1))
 
 # Draw `rem` scrollback text rows: sb[si .. si+rem-1] at pixel rows
-# pr .. pr+rem-1 (16px each).
+# pr .. pr+rem-1 (18px each).
 def vp_sb_rows_go(rem: Nat, +d: Nat, +sb: List<&2, String>, +si: U32, img: Image, +ox: U32, +oy: U32, +pr: U32) -> Image:
   match rem:
     case 0n: img
     case 1n+m:
       vp_sb_rows_go(m, d, sb, U32.add(si, 1),
-        draw_text_go(sb_get(sb, si), d, img, ox, U32.add(U32.add(oy, U32.mul(pr, 16)), 2), ansi_color(7)),
+        draw_text_go(sb_get(sb, si), d, img, ox, U32.add(U32.add(oy, U32.mul(pr, 18)), 1), ansi_color(7)),
         ox, oy, U32.add(pr, 1))
 
 def term_render_vp(+d: Nat, +t: Term, img: Image, +ox: U32, +oy: U32, +cols: Nat, +rows: Nat) -> Image:

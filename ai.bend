@@ -193,10 +193,10 @@ def ai_overlay_lines(+inner: AIInner, +items: List<&2, Item>) -> List<&2, String
     case AINone{}: Con{"", Nil{}}
 
 def ai_overlay(+d: Nat, img: Image, +th: Theme, +inner: AIInner, +items: List<&2, Item>) -> Image:
-  +img2 = ui_panel(d, img, rect(212, 150, 600, 420), th)
-  +img3 = draw_text("AI grouping", d, img2, 228, 164, col_text())
-  +img4 = fill_rect(d, img3, 213, 190, 598, 1, col_line())
-  draw_lines(d, ai_overlay_lines(inner, items), img4, 228, 204, 20, col_body())
+  +img2 = ui_panel(d, img, rect(320, 120, 800, 440), th)
+  +img3 = draw_text("AI grouping", d, img2, 340, 136, col_text())
+  +img4 = fill_rect(d, img3, 321, 164, 798, 1, col_line())
+  draw_lines(d, ai_overlay_lines(inner, items), img4, 340, 180, 17, col_body())
 def json_escape_char(+c: U32) -> String:
   match c:
     case 34: "\\\""

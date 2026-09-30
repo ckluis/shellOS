@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."
 export BEND_NO_TELEMETRY=1
 BEND="$HOME/.bend/bin/bend"
 mkdir -p build/effs && cp -f effs/*.c effs/*.js build/effs/
-APP="font6x12.bend img.bend ui.bend reader.bend term.bend shell.bend pty.bend sock.bend search.bend gmail.bend ai.bend app.bend"
+APP="font8x16.bend img.bend ui.bend reader.bend term.bend shell.bend pty.bend sock.bend search.bend gmail.bend ai.bend app.bend"
 [ $# -gt 0 ] && SUITES="$*" || SUITES=$(ls test_*.bend)
 bad=0
 for t in $SUITES; do

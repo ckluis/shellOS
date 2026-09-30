@@ -94,7 +94,7 @@ def ui_pick_str(+b: Bool, +yes: String, +no: String) -> String:
     case True{}: yes
     case False{}: no
 
-# ---------- Symbols (font6x12.bend codes 1-7) ----------
+# ---------- Symbols (font8x16.bend codes 1-7) ----------
 def sym(+c: U32) -> String: Char.show(Chr{c})
 def sym_dot() -> String: sym(1)
 def sym_ell() -> String: sym(2)
@@ -120,9 +120,9 @@ def ui_fit_go(+over: Bool, +s: String, +max: Nat) -> String:
 def ui_fit(+s: String, +max: Nat) -> String:
   ui_fit_go(Nat.is_lt(max, String.length(s)), s, max)
 
-# Fit into a pixel width (6px cells).
+# Fit into a pixel width (8px cells).
 def ui_fit_px(+s: String, +px: U32) -> String:
-  ui_fit(s, U32.to_nat(U32.div(px, 6)))
+  ui_fit(s, U32.to_nat(U32.div(px, 8)))
 
 # Right-aligned text ending at xr.
 def ui_text_right(+s: String, +d: Nat, img: Image, +xr: U32, +y: U32, +c: U32) -> Image:
@@ -143,11 +143,11 @@ def ui_box(+d: Nat, img: Image, +x: U32, +y: U32, +w: U32, +h: U32, +c: U32) -> 
   +i7 = fill_rect(d, i6, U32.add(x, 1), U32.sub(y2, 1), 1, 1, c)
   fill_rect(d, i7, U32.sub(x2, 1), U32.sub(y2, 1), 1, 1, c)
 
-# A label set into a border line at (x, y): the line is cut 4px either
-# side and the 12px glyphs straddle it (6 above, 6 below).
+# A label set into a border line at (x, y): the line is cut 6px either
+# side and the 16px glyphs straddle it (8 above, 8 below).
 def ui_border_label(+d: Nat, img: Image, +x: U32, +y: U32, +s: String, +bg: U32, +c: U32) -> Image:
-  +i1 = fill_rect(d, img, U32.sub(x, 4), y, U32.add(text_width(s), 8), 1, bg)
-  draw_text(s, d, i1, x, U32.sub(y, 6), c)
+  +i1 = fill_rect(d, img, U32.sub(x, 6), y, U32.add(text_width(s), 12), 1, bg)
+  draw_text(s, d, i1, x, U32.sub(y, 8), c)
 
 def ui_border_label_right_go(+empty: Bool, +d: Nat, img: Image, +xr: U32, +y: U32, +s: String, +bg: U32, +c: U32) -> Image:
   match empty:
@@ -159,14 +159,14 @@ def ui_border_label_right(+d: Nat, img: Image, +xr: U32, +y: U32, +s: String, +b
 
 # Pane: interior fill (self-clearing inside the border), rounded border
 # (accent when focused), title set into the top border, and an optional
-# right-aligned border label. Glyphs reach 6px above the pane's top edge.
+# right-aligned border label. Glyphs reach 8px above the pane's top edge.
 def ui_pane(+d: Nat, img: Image, +r: Rect, +title: String, +right: String, +focus: Bool) -> Image:
   match r:
     case R{x, y, w, h}:
       +i1 = fill_rect(d, img, U32.add(x, 1), U32.add(y, 1), U32.sub(w, 2), U32.sub(h, 2), col_bg())
       +i2 = ui_box(d, i1, x, y, w, h, ui_pick(focus, col_accent(), col_line()))
-      +i3 = ui_border_label(d, i2, U32.add(x, 12), y, title, col_bg(), ui_pick(focus, col_accent(), col_sub()))
-      ui_border_label_right(d, i3, U32.sub(U32.add(x, w), 12), y, right, col_bg(), col_faint())
+      +i3 = ui_border_label(d, i2, U32.add(x, 16), y, title, col_bg(), ui_pick(focus, col_accent(), col_sub()))
+      ui_border_label_right(d, i3, U32.sub(U32.add(x, w), 16), y, right, col_bg(), col_faint())
 
 # Overlay card: drop shadow, raised fill, accent border.
 def ui_panel(+d: Nat, img: Image, +r: Rect, +th: Theme) -> Image:
@@ -178,7 +178,7 @@ def ui_panel(+d: Nat, img: Image, +r: Rect, +th: Theme) -> Image:
 
 # Keycap: a small filled cell behind a key name.
 def ui_keycap(+d: Nat, img: Image, +x: U32, +y: U32, +k: String, +on: Bool) -> Image:
-  +i1 = fill_rect(d, img, U32.sub(x, 4), U32.sub(y, 2), U32.add(text_width(k), 8), 16, ui_pick(on, col_keycap_on(), col_keycap()))
+  +i1 = fill_rect(d, img, U32.sub(x, 5), U32.sub(y, 3), U32.add(text_width(k), 10), 22, ui_pick(on, col_keycap_on(), col_keycap()))
   draw_text(k, d, i1, x, y, ui_pick(on, col_accent(), col_sub()))
 
 # Draw a label (text) at rect's top-left with padding, clipped to the rect.

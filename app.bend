@@ -500,14 +500,14 @@ def pal_key_name_go(+code: U32) -> String:
     case 125: "}"
     case c: Char.show(Chr{c})
 
-# Overlay cards (palette, help; search.bend matches): x 212..812 from
-# y 150, a 40px input header, 26px rows from y 198, a 40px footer.
+# Overlay cards (palette, help; search.bend matches): x 320..1120 from
+# y 120, a 44px input header, 30px rows from y 174, a footer legend.
 def card_row_bg(+on: Bool, +d: Nat, img: Image, +y: U32) -> Image:
   match on:
     case False{}: img
     case True{}:
-      +i1 = fill_rect(d, img, 213, y, 598, 24, col_selbg())
-      fill_rect(d, i1, 213, y, 2, 24, col_accent())
+      +i1 = fill_rect(d, img, 321, y, 798, 28, col_selbg())
+      fill_rect(d, i1, 321, y, 2, 28, col_accent())
 
 # Action descriptions read "k - text"; the keycap already shows k, so the
 # card drops everything through the first " - " (or keeps the whole
@@ -525,13 +525,13 @@ def pal_overlay_row_draw(img: Image, +act: PalAct, +d: Nat, +th: Theme, +sel: U3
   match act:
     case PAct{key, label, desc}:
       +on = U32.is_eq(sel, absidx)
-      +y = U32.add(198, U32.mul(visrow, 26))
+      +y = U32.add(174, U32.mul(visrow, 30))
       +i1 = card_row_bg(on, d, img, y)
-      +i2 = draw_text(label, d, i1, 228, U32.add(y, 6), ui_pick(on, col_text(), col_body()))
-      +dx = U32.add(240, text_width(label))
-      +i3 = draw_text(ui_fit_px(pal_desc_body(desc), U32.sub(752, dx)), d, i2, dx, U32.add(y, 6), col_sub())
+      +i2 = draw_text(label, d, i1, 340, U32.add(y, 6), ui_pick(on, col_text(), col_body()))
+      +dx = U32.add(356, text_width(label))
+      +i3 = draw_text(ui_fit_px(pal_desc_body(desc), U32.sub(1056, dx)), d, i2, dx, U32.add(y, 6), col_sub())
       +k = pal_key_name_go(key)
-      ui_keycap(d, i3, U32.sub(792, text_width(k)), U32.add(y, 6), k, on)
+      ui_keycap(d, i3, U32.sub(1100, text_width(k)), U32.add(y, 6), k, on)
 
 # Selection-relative windowing: the overlay shows 12 rows; when sel roams
 # past row 11 the window pages so the cursor stays visible. start is the
@@ -571,40 +571,40 @@ def card_rows_vis(+n: U32) -> U32:
     case _: u32_min(n, 12)
 
 def card_h(+rows: U32) -> U32:
-  U32.add(96, U32.mul(rows, 26))
+  U32.add(106, U32.mul(rows, 30))
 
 # Input header: prompt, query + block cursor (or a placeholder), and a
 # right-aligned count; a rule underneath.
 def card_input_text(+empty: Bool, +d: Nat, img: Image, +q: String, +hint: String) -> Image:
   match empty:
     case True{}:
-      +i1 = fill_rect(d, img, 244, 164, 6, 12, col_accent())
-      draw_text(hint, d, i1, 258, 164, col_faint())
+      +i1 = fill_rect(d, img, 360, 136, 8, 16, col_accent())
+      draw_text(hint, d, i1, 376, 136, col_faint())
     case False{}:
-      +i1 = draw_text(ui_fit(q, 80n), d, img, 244, 164, col_text())
-      fill_rect(d, i1, U32.add(245, text_width(ui_fit(q, 80n))), 164, 6, 12, col_accent())
+      +i1 = draw_text(ui_fit(q, 80n), d, img, 360, 136, col_text())
+      fill_rect(d, i1, U32.add(361, text_width(ui_fit(q, 80n))), 136, 8, 16, col_accent())
 
 def card_header(+d: Nat, img: Image, +prompt: String, +q: String, +hint: String, +right: String) -> Image:
-  +i1 = draw_text(prompt, d, img, 228, 164, col_accent())
+  +i1 = draw_text(prompt, d, img, 340, 136, col_accent())
   +i2 = card_input_text(String.eq(q, ""), d, i1, q, hint)
-  +i3 = ui_text_right(right, d, i2, 796, 164, col_faint())
-  fill_rect(d, i3, 213, 190, 598, 1, col_line())
+  +i3 = ui_text_right(right, d, i2, 1100, 136, col_faint())
+  fill_rect(d, i3, 321, 164, 798, 1, col_line())
 
 # Footer legend: move / confirm / close, on a rule.
 def card_footer(+d: Nat, img: Image, +y: U32, +enter_label: String) -> Image:
-  +i1 = fill_rect(d, img, 213, U32.sub(y, 10), 598, 1, col_line())
-  +i2 = draw_text(String.append(sym_up(), sym_down()), d, i1, 228, y, col_accent())
-  +i3 = draw_text("move", d, i2, 246, y, col_sub())
-  +i4 = draw_text("enter", d, i3, 288, y, col_accent())
-  +i5 = draw_text(enter_label, d, i4, 324, y, col_sub())
-  +x = U32.add(342, text_width(enter_label))
+  +i1 = fill_rect(d, img, 321, U32.sub(y, 12), 798, 1, col_line())
+  +i2 = draw_text(String.append(sym_up(), sym_down()), d, i1, 340, y, col_accent())
+  +i3 = draw_text("move", d, i2, 364, y, col_sub())
+  +i4 = draw_text("enter", d, i3, 420, y, col_accent())
+  +i5 = draw_text(enter_label, d, i4, 468, y, col_sub())
+  +x = U32.add(492, text_width(enter_label))
   +i6 = draw_text("esc", d, i5, x, y, col_accent())
-  draw_text("close", d, i6, U32.add(x, 24), y, col_sub())
+  draw_text("close", d, i6, U32.add(x, 32), y, col_sub())
 
 def card_empty(+empty: Bool, +d: Nat, img: Image, +msg: String) -> Image:
   match empty:
     case False{}: img
-    case True{}: draw_text(msg, d, img, 228, 204, col_faint())
+    case True{}: draw_text(msg, d, img, 340, 180, col_faint())
 
 def pal_count_str(+n: U32, +total: U32) -> String:
   String.append(U32.show(n), String.append(" / ", U32.show(total)))
@@ -613,11 +613,11 @@ def draw_pal_overlay_open(+d: Nat, img: Image, +th: Theme, +q: String, +sel: U32
   +hits = pal_filter(q, acts)
   +n = pal_count(hits)
   +h = card_h(card_rows_vis(n))
-  +p = ui_panel(d, img, rect(212, 150, 600, h), th)
+  +p = ui_panel(d, img, rect(320, 120, 800, h), th)
   +p1 = card_header(d, p, ">", q, "type to filter actions", pal_count_str(n, pal_count(acts)))
   +p2 = pal_overlay_rows(d, p1, th, hits, sel)
   +p3 = card_empty(U32.is_eq(n, 0), d, p2, "No matching actions.")
-  card_footer(d, p3, U32.add(150, U32.sub(h, 26)), "run")
+  card_footer(d, p3, U32.add(120, U32.sub(h, 30)), "run")
 
 def draw_pal_overlay(+d: Nat, img: Image, +th: Theme, +pal: PalSt, +ctx: U32) -> Image:
   match pal:
@@ -749,11 +749,11 @@ def help_rows_go(+binds: List<&2, HelpBind>, +d: Nat, img: Image, +th: Theme, +y
   match binds:
     case Nil{}: img
     case HB{_, key, desc} <> rest:
-      +i1 = ui_keycap(d, img, 232, y, key, False{})
-      help_rows_go(rest, d, draw_text(desc, d, i1, 360, y, col_body()), th, U32.add(y, 22))
+      +i1 = ui_keycap(d, img, 350, y, key, False{})
+      help_rows_go(rest, d, draw_text(desc, d, i1, 530, y, col_body()), th, U32.add(y, 26))
 
 def help_rows(+d: Nat, img: Image, +th: Theme, +binds: List<&2, HelpBind>) -> Image:
-  help_rows_go(binds, d, img, th, 204)
+  help_rows_go(binds, d, img, th, 180)
 
 def help_count_go(+binds: List<&2, HelpBind>, +n: U32) -> U32:
   match binds:
@@ -766,19 +766,19 @@ def help_count(+binds: List<&2, HelpBind>) -> U32:
 
 def draw_help_overlay(+d: Nat, img: Image, +th: Theme, +ctx: U32) -> Image:
   +n = help_count(help_binds_for(ctx))
-  +h = U32.add(100, U32.mul(n, 22))
-  +p = ui_panel(d, img, rect(212, 150, 600, h), th)
-  +p1 = draw_text("Keys", d, p, 228, 164, col_text())
-  +p2 = draw_text(help_ctx_name(ctx), d, p1, 264, 164, col_accent())
-  +p3 = ui_text_right(String.append(U32.show(n), " keys"), d, p2, 796, 164, col_faint())
-  +p4 = fill_rect(d, p3, 213, 190, 598, 1, col_line())
+  +h = U32.add(112, U32.mul(n, 26))
+  +p = ui_panel(d, img, rect(320, 120, 800, h), th)
+  +p1 = draw_text("Keys", d, p, 340, 136, col_text())
+  +p2 = draw_text(help_ctx_name(ctx), d, p1, 388, 136, col_accent())
+  +p3 = ui_text_right(String.append(U32.show(n), " keys"), d, p2, 1100, 136, col_faint())
+  +p4 = fill_rect(d, p3, 321, 164, 798, 1, col_line())
   +p5 = help_rows(d, p4, th, help_binds_for(ctx))
-  +fy = U32.add(150, U32.sub(h, 26))
-  +p6 = fill_rect(d, p5, 213, U32.sub(fy, 10), 598, 1, col_line())
-  +p7 = draw_text("?", d, p6, 228, fy, col_accent())
-  +p8 = draw_text("or", d, p7, 240, fy, col_faint())
-  +p9 = draw_text("esc", d, p8, 258, fy, col_accent())
-  draw_text("close", d, p9, 282, fy, col_sub())
+  +fy = U32.add(120, U32.sub(h, 30))
+  +p6 = fill_rect(d, p5, 321, U32.sub(fy, 12), 798, 1, col_line())
+  +p7 = draw_text("?", d, p6, 340, fy, col_accent())
+  +p8 = draw_text("or", d, p7, 356, fy, col_faint())
+  +p9 = draw_text("esc", d, p8, 380, fy, col_accent())
+  draw_text("close", d, p9, 412, fy, col_sub())
 
 def acc_render_search_open(+d: Nat, img: Image, +th: Theme, +q: String, +sel: U32, +items: List<&2, Item>, +feed: String, +tabs: List<&2, Tab>, +tab_idx: U32) -> Image:
   +termlines = acc_termlines(True{}, tabs, tab_idx)
@@ -790,12 +790,12 @@ def acc_render_search(+d: Nat, img: Image, +th: Theme, +q: String, +open: Bool, 
     case True{}: acc_render_search_open(d, img, th, q, sel, items, feed, tabs, tab_idx)
 
 def acc_render_note_open(+d: Nat, img: Image, +th: Theme, +title: String) -> Image:
-  +p1 = ui_panel(d, img, R{262, 380, 500, 104}, th)
-  +p2 = draw_text("Save article", d, p1, 278, 394, col_text())
-  +p3 = fill_rect(d, p2, 263, 418, 498, 1, col_line())
-  +p4 = draw_text(sym_dot(), d, p3, 278, 430, col_cyan())
-  +p5 = draw_text(ui_fit(title, 76n), d, p4, 292, 430, col_body())
-  draw_text("type the note in the bar below", d, p5, 278, 456, col_faint())
+  +p1 = ui_panel(d, img, R{420, 360, 600, 128}, th)
+  +p2 = draw_text("Save article", d, p1, 440, 376, col_text())
+  +p3 = fill_rect(d, p2, 421, 404, 598, 1, col_line())
+  +p4 = draw_text(sym_dot(), d, p3, 440, 418, col_cyan())
+  +p5 = draw_text(ui_fit(title, 66n), d, p4, 458, 418, col_body())
+  draw_text("type the note in the bar below", d, p5, 440, 450, col_faint())
 
 def acc_render_note(+d: Nat, img: Image, +th: Theme, +note: NoteSt) -> Image:
   match note:
@@ -804,10 +804,10 @@ def acc_render_note(+d: Nat, img: Image, +th: Theme, +note: NoteSt) -> Image:
     case NOff{}: img
 
 def acc_render_gmail_on(+d: Nat, img: Image, +th: Theme, +inner: MailInner) -> Image:
-  +p1 = ui_panel(d, img, R{212, 150, 600, 560}, th)
-  +p2 = draw_text("Mail", d, p1, 228, 164, col_text())
-  +p3 = fill_rect(d, p2, 213, 190, 598, 1, col_line())
-  draw_lines(d, mail_lines(inner), p3, 228, 204, 27, col_body())
+  +p1 = ui_panel(d, img, R{320, 120, 800, 620}, th)
+  +p2 = draw_text("Mail", d, p1, 340, 136, col_text())
+  +p3 = fill_rect(d, p2, 321, 164, 798, 1, col_line())
+  draw_lines(d, mail_lines(inner), p3, 340, 180, 25, col_body())
 
 def acc_render_gmail(+d: Nat, img: Image, +th: Theme, +m: MailSt) -> Image:
   match m:
@@ -956,22 +956,22 @@ def status_hints(+ctx: U32) -> List<&2, HelpBind>:
     case 7: Con{HB{7, status_ud(), "scroll"}, Con{HB{7, "n/p", "article"}, Con{HB{7, "s", "save note"}, Con{HB{7, "t", "terminal"}, Con{HB{7, "esc", "back"}, Nil{}}}}}}
     case 8: Con{HB{8, "keys", "go to the shell"}, Con{HB{8, "pgup/pgdn", "scrollback"}, Con{HB{8, "esc", "unfocus"}, Nil{}}}}
     case 9: Con{HB{9, "?", "close"}, Con{HB{9, "esc", "close"}, Nil{}}}
-    case _: Con{HB{0, "/", "search"}, Con{HB{0, ";", "palette"}, Con{HB{0, "a", "add"}, Con{HB{0, "e", "edit"}, Con{HB{0, "d", "delete"}, Con{HB{0, "r", "reader"}, Con{HB{0, "t", "terminal"}, Con{HB{0, "p", "profile"}, Con{HB{0, "?", "help"}, Con{HB{0, "q", "quit"}, Nil{}}}}}}}}}}}
+    case _: Con{HB{0, "/", "search"}, Con{HB{0, ";", "palette"}, Con{HB{0, "a", "add"}, Con{HB{0, "e", "edit"}, Con{HB{0, "d", "delete"}, Con{HB{0, ", .", "page"}, Con{HB{0, "r", "reader"}, Con{HB{0, "t", "terminal"}, Con{HB{0, "p", "profile"}, Con{HB{0, "?", "help"}, Con{HB{0, "q", "quit"}, Nil{}}}}}}}}}}}}
 
 def status_hints_go(+hs: List<&2, HelpBind>, +d: Nat, img: Image, +x: U32) -> Image:
   match hs:
     case Nil{}: img
     case HB{_, k, l} <> rest:
-      +i1 = draw_text(k, d, img, x, 1006, col_accent())
-      +x2 = U32.add(x, U32.add(text_width(k), 6))
-      +i2 = draw_text(l, d, i1, x2, 1006, col_sub())
-      status_hints_go(rest, d, i2, U32.add(x2, U32.add(text_width(l), 18)))
+      +i1 = draw_text(k, d, img, x, 936, col_accent())
+      +x2 = U32.add(x, U32.add(text_width(k), 8))
+      +i2 = draw_text(l, d, i1, x2, 936, col_sub())
+      status_hints_go(rest, d, i2, U32.add(x2, U32.add(text_width(l), 24)))
 
 def status_base(+d: Nat, img: Image, +name: String, +color: U32) -> Image:
-  +i1 = fill_rect(d, img, 0, 999, 1024, 1, col_line())
-  +i2 = fill_rect(d, i1, 0, 1000, 1024, 24, col_bar())
-  +i3 = fill_rect(d, i2, 0, 1000, U32.add(text_width(name), 20), 24, color)
-  draw_text(name, d, i3, 10, 1006, col_bar())
+  +i1 = fill_rect(d, img, 0, 927, 1440, 1, col_line())
+  +i2 = fill_rect(d, i1, 0, 928, 1440, 32, col_bar())
+  +i3 = fill_rect(d, i2, 0, 928, U32.add(text_width(name), 24), 32, color)
+  draw_text(name, d, i3, 12, 936, col_bar())
 
 # Input line: add (1-4, theme = mode - 1), edit (5), note (6).
 def status_input_name(+emode: U32) -> String:
@@ -989,12 +989,12 @@ def status_input_color(+emode: U32) -> U32:
 def status_input_text(+empty: Bool, +d: Nat, img: Image, +x: U32, +text: String, +emode: U32) -> Image:
   match empty:
     case True{}:
-      +i1 = fill_rect(d, img, x, 1006, 6, 12, col_accent())
-      draw_text(ui_pick_str(U32.is_eq(emode, 6), "type a note", "type a title"), d, i1, U32.add(x, 12), 1006, col_faint())
+      +i1 = fill_rect(d, img, x, 936, 8, 16, col_accent())
+      draw_text(ui_pick_str(U32.is_eq(emode, 6), "type a note", "type a title"), d, i1, U32.add(x, 16), 936, col_faint())
     case False{}:
-      +fitted = ui_fit(text, 70n)
-      +i1 = draw_text(fitted, d, img, x, 1006, col_text())
-      fill_rect(d, i1, U32.add(x, U32.add(text_width(fitted), 1)), 1006, 6, 12, col_accent())
+      +fitted = ui_fit(text, 90n)
+      +i1 = draw_text(fitted, d, img, x, 936, col_text())
+      fill_rect(d, i1, U32.add(x, U32.add(text_width(fitted), 1)), 936, 8, 16, col_accent())
 
 # Right side while adding: the theme the item will get (0-3 pick it).
 def status_input_theme(+adding: Bool, +d: Nat, img: Image, +emode: U32) -> Image:
@@ -1003,24 +1003,24 @@ def status_input_theme(+adding: Bool, +d: Nat, img: Image, +emode: U32) -> Image
     case True{}:
       +t = U32.sub(emode, 1)
       +name = theme_name(t)
-      +x = U32.sub(726, text_width(name))
-      +i1 = draw_text("0-3", d, img, U32.sub(x, 56), 1006, col_accent())
-      +i2 = draw_text(sym_dot(), d, i1, x, 1006, theme_color(t))
-      draw_text(name, d, i2, U32.add(x, 14), 1006, col_sub())
+      +x = U32.sub(1100, text_width(name))
+      +i1 = draw_text("0-3", d, img, U32.sub(x, 40), 936, col_accent())
+      +i2 = draw_text(sym_dot(), d, i1, x, 936, theme_color(t))
+      draw_text(name, d, i2, U32.add(x, 18), 936, col_sub())
 
 def status_input(+d: Nat, img: Image, +text: String, +emode: U32) -> Image:
   +name = status_input_name(emode)
   +i1 = status_base(d, img, name, status_input_color(emode))
-  +x = U32.add(text_width(name), 36)
-  +i2 = draw_text(">", d, i1, x, 1006, col_accent())
-  +i3 = status_input_text(String.eq(text, ""), d, i2, U32.add(x, 14), text, emode)
+  +x = U32.add(text_width(name), 44)
+  +i2 = draw_text(">", d, i1, x, 936, col_accent())
+  +i3 = status_input_text(String.eq(text, ""), d, i2, U32.add(x, 18), text, emode)
   +i4 = status_input_theme(Bool.and(U32.is_le(1, emode), U32.is_le(emode, 4)), d, i3, emode)
-  status_hints_go(Con{HB{6, "enter", "save"}, Con{HB{6, "esc", "cancel"}, Nil{}}}, d, i4, 760)
+  status_hints_go(Con{HB{6, "enter", "save"}, Con{HB{6, "esc", "cancel"}, Nil{}}}, d, i4, 1160)
 
 def status_normal(+d: Nat, img: Image, +ctx: U32) -> Image:
   +name = status_badge_name(ctx)
   +i1 = status_base(d, img, name, status_badge_color(ctx))
-  status_hints_go(status_hints(ctx), d, i1, U32.add(text_width(name), 36))
+  status_hints_go(status_hints(ctx), d, i1, U32.add(text_width(name), 44))
 
 def draw_status_go(+typing: Bool, +d: Nat, img: Image, +text: String, +emode: U32, +ctx: U32) -> Image:
   match typing:
@@ -1062,9 +1062,9 @@ def in_rect(+x: U32, +y: U32, +rx: U32, +ry: U32, +rw: U32, +rh: U32) -> Bool:
   Bool.and(Bool.and(U32.is_le(rx, x), U32.is_lt(x, U32.add(rx, rw))),
            Bool.and(U32.is_le(ry, y), U32.is_lt(y, U32.add(ry, rh))))
 
-# Hit areas follow shell.bend's lay_* layout: theme rows x 10..206 at
-# lay_theme_row_y(0..4), h 24; reader pane x 8..508 and terminal pane
-# x 516..1016, both y 564..992.
+# Hit areas follow shell.bend's lay_* layout: theme rows x 14..270 at
+# lay_theme_row_y(0..4), h 26; reader pane x 12..752 and terminal pane
+# x 764..1428, both y 452..916.
 # Clicking a tile focuses it, mirroring keyboard 'r'/'t' exactly
 # (reader: tfocus unchanged; terminal: tfocus=True, reader unfocused).
 def click_go6(+x: U32, +y: U32, b: Bool) -> U32:
@@ -1075,35 +1075,35 @@ def click_go6(+x: U32, +y: U32, b: Bool) -> U32:
 def click_go5(+x: U32, +y: U32, b: Bool) -> U32:
   match b:
     case True{}: 24
-    case False{}: click_go6(x, y, in_rect(x, y, 10, lay_theme_row_y(4), 196, 24))
+    case False{}: click_go6(x, y, in_rect(x, y, 14, lay_theme_row_y(4), 256, 26))
 
 def click_go4(+x: U32, +y: U32, b: Bool) -> U32:
   match b:
     case True{}: 23
-    case False{}: click_go5(x, y, in_rect(x, y, lay_term_x(), lay_band2_y(), lay_pane2_w(), lay_band2_h()))
+    case False{}: click_go5(x, y, in_rect(x, y, lay_term_x(), lay_band2_y(), lay_term_w(), lay_band2_h()))
 
 def click_go3(+x: U32, +y: U32, b: Bool) -> U32:
   match b:
     case True{}: 13
-    case False{}: click_go4(x, y, in_rect(x, y, lay_reader_x(), lay_band2_y(), lay_pane2_w(), lay_band2_h()))
+    case False{}: click_go4(x, y, in_rect(x, y, lay_reader_x(), lay_band2_y(), lay_reader_w(), lay_band2_h()))
 
 def click_go2(+x: U32, +y: U32, b: Bool) -> U32:
   match b:
     case True{}: 12
-    case False{}: click_go3(x, y, in_rect(x, y, 10, lay_theme_row_y(3), 196, 24))
+    case False{}: click_go3(x, y, in_rect(x, y, 14, lay_theme_row_y(3), 256, 26))
 
 def click_go1(+x: U32, +y: U32, b: Bool) -> U32:
   match b:
     case True{}: 11
-    case False{}: click_go2(x, y, in_rect(x, y, 10, lay_theme_row_y(2), 196, 24))
+    case False{}: click_go2(x, y, in_rect(x, y, 14, lay_theme_row_y(2), 256, 26))
 
 def click_go(+x: U32, +y: U32, b: Bool) -> U32:
   match b:
     case True{}: 10
-    case False{}: click_go1(x, y, in_rect(x, y, 10, lay_theme_row_y(1), 196, 24))
+    case False{}: click_go1(x, y, in_rect(x, y, 14, lay_theme_row_y(1), 256, 26))
 
 def click_action(+x: U32, +y: U32) -> U32:
-  click_go(x, y, in_rect(x, y, 10, lay_theme_row_y(0), 196, 24))
+  click_go(x, y, in_rect(x, y, 14, lay_theme_row_y(0), 256, 26))
 
 # Mouse/hover state, threaded alongside EvSt through the event fold.
 # Deliberately a SEPARATE type from EvSt: the ~40 CRUD/entry helpers that
@@ -1124,25 +1124,25 @@ def hover_go5(+x: U32, +y: U32, b: Bool) -> U32:
 def hover_go4(+x: U32, +y: U32, b: Bool) -> U32:
   match b:
     case True{}: 4
-    case False{}: hover_go5(x, y, in_rect(x, y, 10, lay_theme_row_y(4), 196, 24))
+    case False{}: hover_go5(x, y, in_rect(x, y, 14, lay_theme_row_y(4), 256, 26))
 
 def hover_go3(+x: U32, +y: U32, b: Bool) -> U32:
   match b:
     case True{}: 3
-    case False{}: hover_go4(x, y, in_rect(x, y, 10, lay_theme_row_y(3), 196, 24))
+    case False{}: hover_go4(x, y, in_rect(x, y, 14, lay_theme_row_y(3), 256, 26))
 
 def hover_go2(+x: U32, +y: U32, b: Bool) -> U32:
   match b:
     case True{}: 2
-    case False{}: hover_go3(x, y, in_rect(x, y, 10, lay_theme_row_y(2), 196, 24))
+    case False{}: hover_go3(x, y, in_rect(x, y, 14, lay_theme_row_y(2), 256, 26))
 
 def hover_go1(+x: U32, +y: U32, b: Bool) -> U32:
   match b:
     case True{}: 1
-    case False{}: hover_go2(x, y, in_rect(x, y, 10, lay_theme_row_y(1), 196, 24))
+    case False{}: hover_go2(x, y, in_rect(x, y, 14, lay_theme_row_y(1), 256, 26))
 
 def hover_at(+x: U32, +y: U32) -> U32:
-  hover_go1(x, y, in_rect(x, y, 10, lay_theme_row_y(0), 196, 24))
+  hover_go1(x, y, in_rect(x, y, 14, lay_theme_row_y(0), 256, 26))
 
 def tick_ev_move(+x: U32, +y: U32) -> MouseSt:
   MSt{x, y, hover_at(x, y)}
@@ -3678,11 +3678,11 @@ def acc_new() -> AccSt:
 def app_start(+items: List<&2, Item>, +feed0: String, or_: Result<&1,&1, U32 & String, Pty>, +sess: SessSt) -> IO(Unit):
   match or_:
     case Fail{e}:
-      App.run(~ShellSt, ~shell_app(), "Shell-OS", 1024, 1024,
-              shell_state(10n, sess_sel_of(sess), items, Con{TTab{NoPty{}, term_dead()}, Nil{}}, 0, sess_tfocus_restore(sess), sess_vs_restore(sess, feed0), "", 0, 0, 0, 0, sess_profile_of(sess), feed0, sess_acc_restore(sess)))
+      App.run(~ShellSt, ~shell_app(), "Shell-OS", 1440, 960,
+              shell_state(11n, sess_sel_of(sess), items, Con{TTab{NoPty{}, term_dead()}, Nil{}}, 0, sess_tfocus_restore(sess), sess_vs_restore(sess, feed0), "", 0, 0, 0, 0, sess_profile_of(sess), feed0, sess_acc_restore(sess)))
     case Done{pty}:
-      App.run(~ShellSt, ~shell_app(), "Shell-OS", 1024, 1024,
-              shell_state(10n, sess_sel_of(sess), items, Con{TTab{YesPty{pty}, term_view_up(term_new(), sess_sbo_of(sess))}, Nil{}}, 0, sess_tfocus_restore(sess), sess_vs_restore(sess, feed0), "", 0, 0, 0, 0, sess_profile_of(sess), feed0, sess_acc_restore(sess)))
+      App.run(~ShellSt, ~shell_app(), "Shell-OS", 1440, 960,
+              shell_state(11n, sess_sel_of(sess), items, Con{TTab{YesPty{pty}, term_view_up(term_new(), sess_sbo_of(sess))}, Nil{}}, 0, sess_tfocus_restore(sess), sess_vs_restore(sess, feed0), "", 0, 0, 0, 0, sess_profile_of(sess), feed0, sess_acc_restore(sess)))
 
 # Split the loaded session into (profile, session) so main's do-block
 # uses each bound value exactly once (no affine double-use).

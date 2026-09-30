@@ -127,19 +127,19 @@ def search_row_color(+is_cur: Bool, +accent: U32, +text: U32) -> U32:
     case True{}: accent
     case False{}: text
 
-# Card geometry matches app.bend's palette card: rows 26px from y 198.
+# Card geometry matches app.bend's palette card: rows 30px from y 174.
 def search_row_bg(+on: Bool, +d: Nat, img: Image, +y: U32) -> Image:
   match on:
     case False{}: img
     case True{}:
-      +i1 = fill_rect(d, img, 213, y, 598, 24, col_selbg())
-      fill_rect(d, i1, 213, y, 2, 24, col_accent())
+      +i1 = fill_rect(d, img, 321, y, 798, 28, col_selbg())
+      fill_rect(d, i1, 321, y, 2, 28, col_accent())
 
 def search_overlay_row_text(img: Image, +d: Nat, +hit: SearchHit, +cur: U32, +row: U32, +items: List<&2, Item>, +termlines: List<&2, String>, +accent: U32, +text: U32) -> Image:
   +on = U32.is_eq(cur, row)
-  +y = U32.add(198, U32.mul(row, 26))
+  +y = U32.add(174, U32.mul(row, 30))
   +i1 = search_row_bg(on, d, img, y)
-  draw_text(ui_fit(search_hit_text(hit, items, termlines), 94n), d, i1, 228, U32.add(y, 6), ui_pick(on, col_text(), col_body()))
+  draw_text(ui_fit(search_hit_text(hit, items, termlines), 94n), d, i1, 340, U32.add(y, 6), ui_pick(on, col_text(), col_body()))
 
 def search_overlay_row_draw(img: Image, +hit: SearchHit, +d: Nat, +th: Theme, +cur: U32, +row: U32, +items: List<&2, Item>, +termlines: List<&2, String>) -> Image:
   match th:
@@ -289,11 +289,11 @@ def search_rows_vis(+n: U32) -> U32:
 def search_input(+empty: Bool, +d: Nat, img: Image, +q: String) -> Image:
   match empty:
     case True{}:
-      +i1 = fill_rect(d, img, 244, 164, 6, 12, col_accent())
-      draw_text("items, articles, notes, terminal", d, i1, 258, 164, col_faint())
+      +i1 = fill_rect(d, img, 360, 136, 8, 16, col_accent())
+      draw_text("items, articles, notes, terminal", d, i1, 376, 136, col_faint())
     case False{}:
-      +i1 = draw_text(ui_fit(q, 80n), d, img, 244, 164, col_text())
-      fill_rect(d, i1, U32.add(245, text_width(ui_fit(q, 80n))), 164, 6, 12, col_accent())
+      +i1 = draw_text(ui_fit(q, 80n), d, img, 360, 136, col_text())
+      fill_rect(d, i1, U32.add(361, text_width(ui_fit(q, 80n))), 136, 8, 16, col_accent())
 
 def search_count_str(+n: U32) -> String:
   match n:
@@ -303,24 +303,24 @@ def search_count_str(+n: U32) -> String:
 def search_empty(+show: Bool, +d: Nat, img: Image) -> Image:
   match show:
     case False{}: img
-    case True{}: draw_text("No matches.", d, img, 228, 204, col_faint())
+    case True{}: draw_text("No matches.", d, img, 340, 180, col_faint())
 
 def draw_search_overlay(+d: Nat, img: Image, +th: Theme, +hits: List<&2, SearchHit>, +cur: U32, +q: String, +items: List<&2, Item>, +termlines: List<&2, String>) -> Image:
   +n = search_hit_count(hits)
-  +h = U32.add(96, U32.mul(search_rows_vis(n), 26))
-  +p = ui_panel(d, img, rect(212, 150, 600, h), th)
-  +p1 = draw_text("/", d, p, 228, 164, col_accent())
+  +h = U32.add(106, U32.mul(search_rows_vis(n), 30))
+  +p = ui_panel(d, img, rect(320, 120, 800, h), th)
+  +p1 = draw_text("/", d, p, 340, 136, col_accent())
   +p2 = search_input(String.eq(q, ""), d, p1, q)
-  +p3 = ui_text_right(search_count_str(n), d, p2, 796, 164, col_faint())
-  +p4 = fill_rect(d, p3, 213, 190, 598, 1, col_line())
+  +p3 = ui_text_right(search_count_str(n), d, p2, 1100, 136, col_faint())
+  +p4 = fill_rect(d, p3, 321, 164, 798, 1, col_line())
   +p5 = search_overlay_rows(hits, d, p4, th, cur, 0, items, termlines)
   +p6 = search_empty(Bool.and(U32.is_eq(n, 0), bool_not_s(String.eq(q, ""))), d, p5)
-  +fy = U32.add(150, U32.sub(h, 26))
-  +p7 = fill_rect(d, p6, 213, U32.sub(fy, 10), 598, 1, col_line())
-  +p8 = draw_text(String.append(sym_up(), sym_down()), d, p7, 228, fy, col_accent())
-  +p9 = draw_text("move", d, p8, 246, fy, col_sub())
-  +p10 = draw_text("enter", d, p9, 288, fy, col_accent())
-  +p11 = draw_text("open", d, p10, 324, fy, col_sub())
-  +p12 = draw_text("esc", d, p11, 360, fy, col_accent())
-  draw_text("close", d, p12, 384, fy, col_sub())
+  +fy = U32.add(120, U32.sub(h, 30))
+  +p7 = fill_rect(d, p6, 321, U32.sub(fy, 12), 798, 1, col_line())
+  +p8 = draw_text(String.append(sym_up(), sym_down()), d, p7, 340, fy, col_accent())
+  +p9 = draw_text("move", d, p8, 364, fy, col_sub())
+  +p10 = draw_text("enter", d, p9, 420, fy, col_accent())
+  +p11 = draw_text("open", d, p10, 468, fy, col_sub())
+  +p12 = draw_text("esc", d, p11, 524, fy, col_accent())
+  draw_text("close", d, p12, 556, fy, col_sub())
 

@@ -7,7 +7,7 @@
 # ---------- fixtures ----------
 
 def t4_d() -> Nat:
-  Nat.add(5n, 5n)
+  Nat.add(5n, 6n)
 
 def t4_acc0() -> AccSt:
   Acc{"", False{}, 0, MOff{}, AOff{}, NOff{}, False{}, False{}, None{}, Pal{"", False{}, 0, 0}, HOff{}}
@@ -67,13 +67,13 @@ def t4_full(+items: List<&2, Item>, +t: Term, +vs: ViewSt, +hover: U32) -> Image
 def t4_dirty(+frame: Image, +mask: U32, +items: List<&2, Item>, +t: Term, +vs: ViewSt, +hover: U32) -> Image:
   shell_render_dirty(t4_d(), frame, mask, theme_dark(), 0, items, t, False{}, vs, hover, 0, 1, "default")
 
-# ---------- sampled pixel comparison (32px grid, 1024 points) ----------
+# ---------- sampled pixel comparison (32x32 points over the 1440x960 canvas) ----------
 
 def t4_x(+i: U32) -> U32:
-  U32.add(16, U32.mul(U32.mod(i, 32), 32))
+  U32.add(16, U32.mul(U32.mod(i, 32), 44))
 
 def t4_y(+i: U32) -> U32:
-  U32.add(16, U32.mul(U32.div(i, 32), 32))
+  U32.add(16, U32.mul(U32.div(i, 32), 29))
 
 def t4_px_eq(+a: Image, +b: Image, +x: U32, +y: U32) -> Bool:
   U32.is_eq(get_pixel(t4_d(), a, x, y), get_pixel(t4_d(), b, x, y))
