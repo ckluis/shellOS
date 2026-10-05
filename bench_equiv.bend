@@ -1,5 +1,5 @@
 # bench_equiv.bend — Wave 4 native pixel-equivalence oracle.
-# Not a module: concatenated AFTER font.bend img.bend ui.bend reader.bend
+# Not a module: concatenated AFTER font8x16.bend img.bend ui.bend reader.bend
 # term.bend shell.bend (img.bend already carries the ppm_list_append rename).
 # Compares FULL 3,145,728-byte PPM byte lists (not samples): full render vs
 # all-dirty on a black base, plus per-region dirty-on-cached-frame renders.
