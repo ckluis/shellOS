@@ -1,5 +1,6 @@
 # Wave 2 Gmail pagination hostile probe (pure Bend, interpreter).
-# Bundle: cat sock.bend gmail.bend test_wave2_gmail_page.bend > build/w2_gmail_page_all.bend
+# Bundle: the full app bundle, app main renamed; run it with tests/run_suites.sh.
+# (It once took only sock.bend + gmail.bend; gmail.bend now uses ui.bend's types.)
 # Run:    BEND_NO_TELEMETRY=1 ~/.bend-2.0.25/bend/bin/bend run build/w2_gmail_page_all.bend
 # (see build/w2_gmail_page_run.sh)
 # Covers: nextPageToken parse (empty/garbage/overlong/NUL), pageToken request
