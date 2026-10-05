@@ -30,7 +30,8 @@ is foreign code; everything else is pure.
 
 ## macOS (2026-09-30 port — current)
 
-Runs natively on macOS arm64 (Bend 2.0.34, Apple clang, Homebrew `openssl@3`).
+Runs natively on macOS arm64 (Bend 2.0.35, Apple clang, Homebrew `openssl@3`). Ported on 2.0.34;
+re-verified on 2.0.35 on 2026-10-05 with no source changes.
 See the last `REPORT.md` section for the full port record.
 
 ```bash

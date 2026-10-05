@@ -3967,3 +3967,21 @@ Verification: build rc 0, 0 warnings; suites wave3 36/36, wave4_dirty
 `tests/mac_proof.sh` 2 boots PASS (sha256 `84725762…`), promoted binary 1
 boot PASS; mouse: theme-row click filters, terminal click focuses (checked
 by eye); screenshots refreshed in `design/screens/`.
+
+## Bend 2.0.35 re-verification (2026-10-05)
+
+Bend 2.0.35 (released 2026-10-03) builds the app with **no source changes**: `./build.sh native`
+rc 0 in 62 s; the check verdict is the expected foreign-effect one (same 164 seam defs).
+
+- `tests/mac_proof.sh build/shell_pty.new 2`: PASS, 40/40 checks over 2 boots.
+- `tests/run_suites.sh`: wave3_palette 36/36, wave4_dirty 24/24, wave4_scrollback 20/20,
+  wave5_help 18/18, wave5_notes 11/11. test_crud2, test_wave1_session and test_wave2_gmail_page
+  fail exactly as on 2.0.34 (stale fixtures, pre-existing). The suite table is identical on both compilers.
+- Render benchmark (`bench_main.bend`), 2.0.34 vs 2.0.35, three runs each: construct 32-38 vs
+  29-47 ms, encode 385-536 vs 366-500 ms, peak RSS 156 MiB on both. The output frame
+  (`/tmp/bench.ppm`, 4,147,216 bytes) is byte-identical between the two builds.
+- The three benchmark headers named the pre-redesign `font.bend`, which no longer compiles with
+  them on either compiler; they now name `font8x16.bend` (all three typecheck).
+- Two new `ld` warnings ("building for macOS-26.5, but linking with dylib ... built for newer
+  version 27.0") come from Homebrew's openssl@3 being updated on 2026-09-30. A 2.0.34 rebuild today
+  shows the same two warnings. They are not a Bend change; the binary links and passes every check.
