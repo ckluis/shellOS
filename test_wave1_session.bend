@@ -16,13 +16,13 @@ def w1_vs_rf() -> ViewSt:
   VSt{0, True{}, 0, 0, Nil{}}
 
 def w1_acc_g() -> AccSt:
-  Acc{"", False{}, 0, MOn{MUnknown{}}, AOff{}, NOff{}, False{}, False{}, None{}, Pal{"", False{}, 0, 0}}
+  Acc{"", False{}, 0, MOn{MUnknown{}}, AOff{}, NOff{}, False{}, False{}, None{}, Pal{"", False{}, 0, 0}, HOff{}}
 
 def w1_acc_a() -> AccSt:
-  Acc{"", False{}, 0, MOff{}, AOn{AIUnknown{}}, NOff{}, False{}, False{}, None{}, Pal{"", False{}, 0, 0}}
+  Acc{"", False{}, 0, MOff{}, AOn{AIUnknown{}}, NOff{}, False{}, False{}, None{}, Pal{"", False{}, 0, 0}, HOff{}}
 
 def w1_acc_touched() -> AccSt:
-  Acc{"", False{}, 0, MOff{}, AOff{}, NOff{}, False{}, True{}, None{}, Pal{"", False{}, 0, 0}}
+  Acc{"", False{}, 0, MOff{}, AOff{}, NOff{}, False{}, True{}, None{}, Pal{"", False{}, 0, 0}, HOff{}}
 
 def w1_sb_idle() -> SbSt:
   SbS{0, 0, False{}}

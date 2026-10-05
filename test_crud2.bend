@@ -1,10 +1,10 @@
 # test_crud2.bend — CRUD entry-flow tests. Concatenated AFTER app.bend.
 
 def t_items() -> List<&2, Item>:
-  Con{It{"first", 0}, Con{It{"second", 1}, Con{It{"third", 2}, Nil{}}}}
+  Con{item_plain("first", 0), Con{item_plain("second", 1), Con{item_plain("third", 2), Nil{}}}}
 
 def t_items1() -> List<&2, Item>:
-  Con{It{"only", 2}, Nil{}}
+  Con{item_plain("only", 2), Nil{}}
 
 def t_vs() -> ViewSt:
   viewst_new("")
@@ -118,7 +118,7 @@ def t_last_go(items: List<&2, Item>, acc_title: String, acc_theme: U32) -> Strin
     case Nil{}: (acc_title, acc_theme)
     case Con{it, rest}:
       match it:
-        case It{title, theme}: t_last_go(rest, title, theme)
+        case It{title, theme, _, _, _}: t_last_go(rest, title, theme)
 
 def t_fst(p: String & U32) -> String:
   match p:
@@ -213,10 +213,14 @@ def t15() -> Bool:
 def t16() -> Bool:
   t_tfocus_of(tick_ev_single_normal(Key{65, False{}}, 0, t_items(), True{}, False{}, False{}, TtyWNil{}, t_vs()))
 
+# The Panes redesign (f821093) replaced the entry-bar label with the status
+# bar's input line: status_input_name names the mode, and the theme an add
+# will get is drawn separately on the right.
 def t17() -> Bool:
-  Bool.and(t_str_eq(entry_mode_label(0), ""),
-    Bool.and(t_str_eq(entry_mode_label(1), "ADD [0]"),
-      t_str_eq(entry_mode_label(5), "EDIT")))
+  Bool.and(t_str_eq(status_input_name(1), "ADD"),
+    Bool.and(t_str_eq(status_input_name(4), "ADD"),
+      Bool.and(t_str_eq(status_input_name(5), "EDIT"),
+        t_str_eq(status_input_name(6), "NOTE"))))
 
 def t18a() -> Bool:
   t_str_eq(t_summary(tick_ev_go(t_k3(101, 33, 13), evst_new(1, t_items(), False{}, t_vs(), "", 0))), "0||3|1|T|F")
