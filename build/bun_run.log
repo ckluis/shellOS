@@ -1,0 +1,14 @@
+=== bun run start Mon Sep 21 19:29:01 EDT 2026 ===
+All terms check, but 5 defs rely on unsafe or foreign code:
+- filerename_raw
+- save_items_wrote_res
+- save_items_wrote
+- save_items_opened
+- save_items
+
+real	0m16.071s
+user	0m14.346s
+sys	0m1.099s
+bun exit: 0
+9b78a34aeaf6d83db68a3d24636ad0ae  proofs/shell_all_live.ppm
+=== done Mon Sep 21 19:29:50 EDT 2026 ===

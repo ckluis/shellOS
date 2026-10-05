@@ -1,0 +1,5 @@
+build/*
+!build/render.log
+!build/bun_run.log
+proofs/
+.original-package.zip

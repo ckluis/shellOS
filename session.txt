@@ -1,0 +1,14 @@
+sess1
+focus=0
+sbo=0
+search_open=0
+search_q=
+search_sel=0
+sel=1
+page=0
+rart=0
+rscroll=0
+tab_idx=0
+profile=default
+gmail_open=0
+ai_open=0
