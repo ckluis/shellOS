@@ -1,7 +1,7 @@
 # Benchmark main: separates frame construction from PPM encoding.
-# Not a module: concatenated AFTER font.bend img.bend ui.bend reader.bend
+# Not a module: concatenated AFTER font8x16.bend img.bend ui.bend reader.bend
 # term.bend shell.bend.
-# Build: cat font.bend img.bend ui.bend reader.bend term.bend shell.bend bench_main.bend > build/bench_all.bend
+# Build: cat font8x16.bend img.bend ui.bend reader.bend term.bend shell.bend bench_main.bend > build/bench_all.bend
 # Output: /tmp/bench.ppm + timing lines on stdout.
 
 # Pure helper: multi-use time math lives here, where + params are reusable.

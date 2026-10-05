@@ -1,5 +1,5 @@
 # bench_main_w4.bend — Wave 4 benchmark: full vs dirty-region construction.
-# Not a module: concatenated AFTER font.bend img.bend ui.bend reader.bend
+# Not a module: concatenated AFTER font8x16.bend img.bend ui.bend reader.bend
 # term.bend shell.bend (img.bend already carries the ppm_list_append rename).
 # Phases: full construct | dirty(term) | dirty(side+items) | dirty(all) |
 # encode | write. items.txt is loaded 4x up front (untimed; each bind used
