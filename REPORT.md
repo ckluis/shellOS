@@ -3985,3 +3985,20 @@ rc 0 in 62 s; the check verdict is the expected foreign-effect one (same 164 sea
 - Two new `ld` warnings ("building for macOS-26.5, but linking with dylib ... built for newer
   version 27.0") come from Homebrew's openssl@3 being updated on 2026-09-30. A 2.0.34 rebuild today
   shows the same two warnings. They are not a Bend change; the binary links and passes every check.
+
+## Stale suites fixed (2026-10-05)
+
+The three suites that hadn't compiled since before the macOS port now pass; all eight pass,
+198 checks, on Bend 2.0.35. Only tests and the runner changed, not the app.
+
+- `test_crud2` (23/23): items built with the 2-field `It{title, theme}` now use `item_plain`
+  (Item has had 5 fields since saved articles); t17 tested `entry_mode_label`, which the Panes
+  redesign replaced with the status bar's `status_input_name`, so it now checks ADD (modes 1-4),
+  EDIT (5) and NOTE (6).
+- `test_wave1_session` (24/24): `Acc{...}` fixtures gain the 11th field, `help: HOff{}`.
+- `test_wave2_gmail_page` (42/42): `gmail.bend` now uses `ui.bend`'s types, so the old
+  sock+gmail-only bundle can't compile; it runs on the full app bundle like the others.
+- `tests/run_suites.sh`: suites whose main returns a String print it quoted with literal `\n`, and
+  the runner only counted PASS/FAIL at line starts, so test_crud2 showed pass=0 and a FAIL inside
+  that string would have gone unseen. It now splits escaped newlines before counting (checked by
+  breaking one assertion: FAIL, pass=22 fail=1, rc=1) and requires at least one PASS.
